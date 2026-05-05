@@ -634,6 +634,7 @@ async function initMap(){
   });
 
   infoWin = new google.maps.InfoWindow();
+  map.addListener('click', () => infoWin.close());
 
   // ── MAJOR DAM MARKERS ──
   setStep('Plotting dam locations…');
