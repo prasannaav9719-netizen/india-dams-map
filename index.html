@@ -521,7 +521,15 @@ function launchMap(){
 // GOOGLE MAPS INIT
 // ═══════════════════════════════════════════════════════════════
 let map, markers=[], heatmap, osmLayer=[], resLayer=[];
-let infoWin;
+let infoWin, osmClusterer=null;
+
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=src; s.onload=res; s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
 
 function setStep(s){ document.getElementById('load-step').textContent=s; }
 
@@ -712,8 +720,8 @@ async function loadOSMDams(){
   try{
     const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
     const data=await r.json();
-    let cnt=0;
-    (data.elements||[]).forEach(el=>{
+    const rawMarkers=[];
+    (data.elements||[]).slice(0,1200).forEach(el=>{
       const lat=el.lat||(el.center&&el.center.lat);
       const lon=el.lon||(el.center&&el.center.lon);
       if(!lat||!lon) return;
@@ -722,7 +730,8 @@ async function loadOSMDams(){
       const tags=el.tags||{};
       const d={n:tags.name||tags['name:en']||'Unnamed Dam',river:'—',state:'—',pur:null};
       const m=new google.maps.Marker({
-        position:{lat,lng:lon},map,
+        position:{lat,lng:lon},
+        map:null,
         icon:{path:google.maps.SymbolPath.CIRCLE,scale:5,fillColor:'#f97316',fillOpacity:0.85,strokeColor:'#fff',strokeWeight:1,strokeOpacity:0.5},
         title:d.n,zIndex:5
       });
@@ -731,12 +740,25 @@ async function loadOSMDams(){
         infoWin.open(map,m);
         showSideInfo(d);
       });
+      rawMarkers.push(m);
       osmLayer.push(m);
-      cnt++;
     });
+    const cnt=rawMarkers.length;
     document.getElementById('c-osm').textContent=cnt;
     document.getElementById('sv-osm').textContent=cnt;
     document.getElementById('hs-osm').textContent=cnt;
+    // Load MarkerClusterer for performance
+    try{
+      await loadScript('https://unpkg.com/@googlemaps/markerclusterer/dist/index.umd.js');
+      const MC=window.markerClusterer.MarkerClusterer;
+      osmClusterer=new MC({
+        markers:rawMarkers, map,
+        algorithmOptions:{maxZoom:12,radius:60}
+      });
+    }catch(e){
+      // Fallback: show markers directly, capped for performance
+      rawMarkers.slice(0,400).forEach(m=>m.setMap(map));
+    }
     toast(`Loaded ${cnt} additional dams from OpenStreetMap`);
   }catch(e){
     document.getElementById('c-osm').textContent='N/A';
@@ -776,10 +798,11 @@ async function loadReservoirs(){
 // ═══════════════════════════════════════════════════════════════
 function bindToggles(){
   document.getElementById('tgl-major').addEventListener('change',function(){
-    markers.forEach(({marker:m})=>m.setMap(this.checked?map:null));
+    applyFilters(); // respect active filters when toggling
   });
   document.getElementById('tgl-osm').addEventListener('change',function(){
-    osmLayer.forEach(m=>m.setMap(this.checked?map:null));
+    if(osmClusterer) osmClusterer.setMap(this.checked?map:null);
+    else osmLayer.forEach(m=>m.setMap(this.checked?map:null));
   });
   document.getElementById('tgl-heat').addEventListener('change',function(){
     heatmap.setMap(this.checked?map:null);
@@ -813,12 +836,12 @@ function populateFilters(){
   const states=[...new Set(DAMS.map(d=>d.state).filter(Boolean))].sort();
   const fs=document.getElementById('f-state');
   states.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;fs.appendChild(o);});
-  fs.onchange=()=>{filterState=fs.value;applyFilters();};
+  fs.addEventListener('change',()=>{filterState=fs.value;applyFilters();});
 
   const basins=[...new Set(DAMS.map(d=>d.basin).filter(Boolean))].sort();
   const fb=document.getElementById('f-basin');
   basins.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;fb.appendChild(o);});
-  fb.onchange=()=>{filterBasin=fb.value;applyFilters();};
+  fb.addEventListener('change',()=>{filterBasin=fb.value;applyFilters();});
 
   const purposes=[...new Set(DAMS.flatMap(d=>(d.pur||'').split(',').map(p=>p.trim())).filter(Boolean))].sort();
   const pc=document.getElementById('f-pur-tags');
