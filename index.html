@@ -168,31 +168,8 @@ input[type=range]{width:100%;accent-color:#38bdf8;margin-bottom:10px}
 </head>
 <body>
 
-<!-- ── API KEY MODAL ── -->
-<div id="api-modal">
-  <div id="api-card">
-    <div class="icon">🛰️</div>
-    <h2>India Dams — Google Earth View</h2>
-    <p class="desc">Real Google Earth satellite imagery of every major dam and water body across India. Enter your Google Maps API key to begin.</p>
-    <input id="api-input" type="text" placeholder="Paste your Google Maps API key (AIza…)"/>
-    <button id="api-btn" onclick="launchMap()">Launch Satellite Map →</button>
-    <div id="api-note">
-      No key? <a href="https://console.cloud.google.com/google/maps-apis/credentials" target="_blank">Get one free at Google Cloud Console</a> — enable <b>Maps JavaScript API</b> + <b>Visualization API</b>
-    </div>
-    <div class="api-tip">
-      <b>Quick setup:</b><br>
-      1. Go to Google Cloud Console → APIs &amp; Services<br>
-      2. Enable "Maps JavaScript API" and "Maps JavaScript API – Visualization library"<br>
-      3. Create credentials → API Key → paste above
-    </div>
-    <div id="saved-key-row" style="display:none">
-      Saved key found — <button id="use-saved-btn" onclick="useSavedKey()">Use saved key</button>
-    </div>
-  </div>
-</div>
-
 <!-- ── LOADING ── -->
-<div id="loading">
+<div id="loading" style="display:flex">
   <div class="spinner"></div>
   <p>Connecting to Google Earth…</p>
   <div id="load-step">Loading satellite tiles</div>
@@ -213,8 +190,7 @@ input[type=range]{width:100%;accent-color:#38bdf8;margin-bottom:10px}
       <div class="hstat">Reservoirs: <span id="hs-res">—</span></div>
     </div>
     <div id="hdr-actions">
-      <button class="hdr-btn" onclick="map&&map.setCenter({lat:22,lng:80})&&map.setZoom(5)">Reset View</button>
-      <button class="hdr-btn" onclick="showApiModal()">Change Key</button>
+      <button class="hdr-btn" onclick="map.setCenter({lat:22,lng:80});map.setZoom(5)">Reset View</button>
     </div>
   </div>
 
@@ -483,39 +459,17 @@ const DAMS = [
 ];
 
 // ═══════════════════════════════════════════════════════════════
-// API KEY HANDLING
+// AUTO-LOAD WITH EMBEDDED KEY
 // ═══════════════════════════════════════════════════════════════
-(function checkSavedKey(){
-  const k = localStorage.getItem('gmaps_key');
-  if(k){ document.getElementById('saved-key-row').style.display='flex'; }
-})();
-
-function useSavedKey(){
-  const k = localStorage.getItem('gmaps_key');
-  if(k){ document.getElementById('api-input').value=k; launchMap(); }
-}
-
-function showApiModal(){
-  document.getElementById('api-modal').style.display='flex';
-  document.getElementById('app').style.display='none';
-}
-
-function launchMap(){
-  const key = document.getElementById('api-input').value.trim() || localStorage.getItem('gmaps_key');
-  if(!key){ alert('Please enter a Google Maps API key'); return; }
-  localStorage.setItem('gmaps_key', key);
-  document.getElementById('api-modal').style.display='none';
-  document.getElementById('loading').style.display='flex';
-  window._gmapsKey = key;
+(function(){
   const s = document.createElement('script');
-  s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=visualization&callback=initMap&v=weekly`;
+  s.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyAMz4H-9kv4BAL59qcWAhf57MEZG5MBSsM&libraries=visualization&callback=initMap&v=weekly';
   s.onerror = () => {
-    document.getElementById('loading').style.display='none';
-    document.getElementById('api-modal').style.display='flex';
-    alert('Failed to load Google Maps. Check your API key and ensure "Maps JavaScript API" is enabled in Google Cloud Console.');
+    document.getElementById('loading').innerHTML =
+      '<div style="text-align:center;color:#ef4444;padding:40px"><div style="font-size:2rem">⚠</div><p style="margin-top:12px">Failed to load Google Maps.<br>Check the API key or enable billing.</p></div>';
   };
   document.head.appendChild(s);
-}
+})();
 
 // ═══════════════════════════════════════════════════════════════
 // AGENCY CONTACTS
@@ -558,6 +512,51 @@ const AGENCIES = {
   ARWRD:   {name:'Arunachal Pradesh Water Resources',     ph:'+91-360-221-2321', email:'wrd.ar@nic.in'},
   ASSAM:   {name:'Assam Water Resources Dept',            ph:'+91-361-223-7680', email:'wrd.assam@nic.in'},
 };
+
+// State → agency fallback (used for smaller/OSM dams by coordinate lookup)
+const STATE_AGENCY = {
+  'Andhra Pradesh':'APWRD','Arunachal Pradesh':'ARWRD','Assam':'ASSAM',
+  'Bihar':'BIHWRD','Chhattisgarh':'CSWRD','Goa':'GOAWRD','Gujarat':'GUJWRD',
+  'Haryana':'BBMB','Himachal Pradesh':'HPPCL','Jammu & Kashmir':'JKPDD',
+  'Jammu and Kashmir':'JKPDD','Jharkhand':'JHWRD','Karnataka':'KWRD',
+  'Kerala':'KSEB','Madhya Pradesh':'MPWRD','Maharashtra':'MWRD',
+  'Manipur':'MANPDD','Meghalaya':'MEGHWRD','Nagaland':'NAGPDD',
+  'Odisha':'OWRD','Punjab':'BBMB','Rajasthan':'RAJWRD','Sikkim':'CWC',
+  'Tamil Nadu':'TNWRD','Telangana':'TSIDD','Tripura':'CWC',
+  'Uttarakhand':'UKJVN','Uttar Pradesh':'UPIRD','West Bengal':'WBWRD',
+  'Mizoram':'CWC',
+};
+
+function coordToAgency(lat, lon){
+  if(lat>32&&lon<80)                                    return 'JKPDD';
+  if(lat>30.4&&lat<33.5&&lon>75.3&&lon<79.5)           return 'HPPCL';
+  if(lat>29.5&&lat<32.5&&lon>73.7&&lon<76.9)           return 'BBMB';   // Punjab
+  if(lat>28.4&&lat<31.5&&lon>77.4&&lon<81.2)           return 'UKJVN';
+  if(lat>23.9&&lat<30.4&&lon>77&&lon<84.7)             return 'UPIRD';
+  if(lat>22&&lat<30&&lon>69.5&&lon<76.5)               return 'RAJWRD';
+  if(lat>20&&lat<24.5&&lon>68.5&&lon<74.5)             return 'GUJWRD';
+  if(lat>22&&lat<26&&lon>74&&lon<82.5)                 return 'MPWRD';
+  if(lat>19&&lat<22.5&&lon>74&&lon<82)                 return 'MPWRD';
+  if(lat>15.5&&lat<21.5&&lon>72.5&&lon<80.5)           return 'MWRD';
+  if(lat>17&&lat<20&&lon>78.5&&lon<81.5)               return 'TSIDD';
+  if(lat>15.5&&lat<18&&lon>76.5&&lon<79.5)             return 'TSIDD';
+  if(lat>12.5&&lat<17&&lon>76.5&&lon<84.5)             return 'APWRD';
+  if(lat>11.5&&lat<16&&lon>74.2&&lon<78.5)             return 'KWRD';
+  if(lat>8&&lat<12.5&&lon>74.5&&lon<77.5)              return 'KSEB';
+  if(lat>8&&lat<12.5&&lon>77.4&&lon<80.5)              return 'TNWRD';
+  if(lat>17.5&&lat<22&&lon>82&&lon<87.5)               return 'OWRD';
+  if(lat>20&&lat<25&&lon>84.5&&lon<87.5)               return 'JHWRD';
+  if(lat>21.5&&lat<27.5&&lon>85.5&&lon<89.5)           return 'WBWRD';
+  if(lat>24&&lat<27.5&&lon>83.5&&lon<88.5)             return 'BIHWRD';
+  if(lat>19&&lat<24&&lon>80&&lon<84.5)                 return 'CSWRD';
+  if(lat>25&&lat<27.5&&lon>89.5&&lon<93)               return 'MEGHWRD';
+  if(lat>25.5&&lat<27&&lon>93&&lon<95.5)               return 'NAGPDD';
+  if(lat>23&&lat<25.5&&lon>92.5&&lon<95)               return 'MANPDD';
+  if(lat>26&&lat<30&&lon>91&&lon<97.5)                 return 'ARWRD';
+  if(lat>24&&lat<28&&lon>88.5&&lon<97)                 return 'ASSAM';
+  if(lat>15&&lat<16&&lon>73.5&&lon<74.5)               return 'GOAWRD';
+  return 'CWC';
+}
 
 const DAM_AGENCY = {
   'Tehri Dam':'THDC','Bhakra Dam':'BBMB','Sardar Sarovar Dam':'SSNNL',
@@ -656,6 +655,7 @@ async function initMap(){
       title:d.n,
       zIndex:10
     });
+    d._lat=d.lat; d._lon=d.lon;
     m.addListener('click',()=>onDamClick(d,m));
     markers.push({dam:d,marker:m});
   });
@@ -724,21 +724,38 @@ function getMarkerSize(cap){
   return Math.max(5, Math.min(18, 3+Math.log10(Math.max(1,cap))*4));
 }
 
-function getAgency(name){ const c=DAM_AGENCY[name]; return c?AGENCIES[c]:null; }
+function getAgency(d){
+  // 1. Exact name match (curated dams)
+  const c=DAM_AGENCY[d.n];
+  if(c) return {...AGENCIES[c], _exact:true};
+  // 2. State tag match (OSM dams with addr:state)
+  if(d.state&&d.state!=='—'){
+    const sc=STATE_AGENCY[d.state];
+    if(sc) return {...AGENCIES[sc], _exact:false};
+  }
+  // 3. Coordinate-based state detection (all other dams)
+  if(d._lat!=null){
+    const sc=coordToAgency(d._lat,d._lon);
+    return {...AGENCIES[sc], _exact:false};
+  }
+  return null;
+}
 
 function agencyHtml(ag){
   if(!ag) return `<div style="margin-top:8px;font-size:.7rem;color:#334155;border-top:1px solid #1e293b;padding-top:8px">Agency info not available</div>`;
+  const note=ag._exact?'':`<div style="font-size:.65rem;color:#475569;margin-top:4px;font-style:italic">&#9432; Regional authority — verify for this specific dam</div>`;
   return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e293b">
     <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.8px;color:#475569;margin-bottom:4px">Managing Agency</div>
     <div style="color:#38bdf8;font-weight:600;font-size:.82rem;margin-bottom:5px">${ag.name}</div>
     <a href="tel:${ag.ph}" style="display:block;color:#22c55e;font-size:.78rem;text-decoration:none;margin-bottom:3px">&#128222; ${ag.ph}</a>
     <a href="mailto:${ag.email}" style="display:block;color:#60a5fa;font-size:.78rem;text-decoration:none">&#9993; ${ag.email}</a>
+    ${note}
   </div>`;
 }
 
 function buildInfoHtml(d){
   const purposes=(d.pur||'—').split(',').map(p=>`<span class="ptag">${p.trim()}</span>`).join('');
-  const ag=getAgency(d.n);
+  const ag=getAgency(d);
   return `<div class="gm-iw-name">${d.n}</div>
     <div class="gm-iw-row"><span class="gm-iw-k">River</span><span class="gm-iw-v">${d.river||'—'}</span></div>
     <div class="gm-iw-row"><span class="gm-iw-k">State</span><span class="gm-iw-v">${d.state||'—'}</span></div>
@@ -753,7 +770,7 @@ function buildInfoHtml(d){
 
 function showSideInfo(d){
   const purposes=(d.pur||'—').split(',').map(p=>`<span class="ptag">${p.trim()}</span>`).join('');
-  const ag=getAgency(d.n);
+  const ag=getAgency(d);
   const agBlock=ag?`
     <div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e293b">
       <div class="sec-title" style="margin-bottom:6px">Managing Agency</div>
@@ -839,7 +856,7 @@ async function loadOSMDams(){
       const isDup=DAMS.some(d=>Math.abs(d.lat-lat)<0.015&&Math.abs(d.lon-lon)<0.015);
       if(isDup) return;
       const tags=el.tags||{};
-      const d={n:tags.name||tags['name:en']||'Unnamed Dam',river:'—',state:'—',pur:null};
+      const d={n:tags.name||tags['name:en']||'Unnamed Dam',river:'—',state:tags['addr:state']||tags.state||'—',pur:null,_lat:lat,_lon:lon};
       const m=new google.maps.Marker({
         position:{lat,lng:lon},
         map:null,
