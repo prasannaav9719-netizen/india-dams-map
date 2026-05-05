@@ -757,7 +757,9 @@ function agencyHtml(ag){
 function buildInfoHtml(d){
   const purposes=(d.pur||'—').split(',').map(p=>`<span class="ptag">${p.trim()}</span>`).join('');
   const ag=getAgency(d);
-  return `<div class="gm-iw-name">${d.n}</div>
+  return `<div style="position:relative">
+    <button onclick="infoWin.close()" style="position:absolute;top:-4px;right:-4px;background:none;border:none;color:#64748b;font-size:1.1rem;cursor:pointer;line-height:1;padding:2px 4px" title="Close">&times;</button>
+    <div class="gm-iw-name" style="padding-right:18px">${d.n}</div>
     <div class="gm-iw-row"><span class="gm-iw-k">River</span><span class="gm-iw-v">${d.river||'—'}</span></div>
     <div class="gm-iw-row"><span class="gm-iw-k">State</span><span class="gm-iw-v">${d.state||'—'}</span></div>
     ${d.yr?`<div class="gm-iw-row"><span class="gm-iw-k">Completed</span><span class="gm-iw-v">${d.yr}</span></div>`:''}
@@ -766,7 +768,8 @@ function buildInfoHtml(d){
     ${d.type?`<div class="gm-iw-row"><span class="gm-iw-k">Type</span><span class="gm-iw-v" style="text-transform:capitalize">${d.type}</span></div>`:''}
     ${d.basin?`<div class="gm-iw-row"><span class="gm-iw-k">Basin</span><span class="gm-iw-v">${d.basin}</span></div>`:''}
     <div style="margin-top:6px">${purposes}</div>
-    ${agencyHtml(ag)}`;
+    ${agencyHtml(ag)}
+  </div>`;
 }
 
 function showSideInfo(d){
