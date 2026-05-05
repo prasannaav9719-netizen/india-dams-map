@@ -518,6 +518,90 @@ function launchMap(){
 }
 
 // ═══════════════════════════════════════════════════════════════
+// AGENCY CONTACTS
+// ═══════════════════════════════════════════════════════════════
+const AGENCIES = {
+  THDC:    {name:'THDC India Ltd',                        ph:'+91-135-247-9700', email:'thdc@thdcil.co.in'},
+  BBMB:    {name:'Bhakra Beas Management Board',          ph:'+91-172-274-0699', email:'info@bbmb.gov.in'},
+  SSNNL:   {name:'Sardar Sarovar Narmada Nigam Ltd',      ph:'+91-79-2325-6677', email:'ssnl@gujarat.gov.in'},
+  NHPC:    {name:'NHPC Limited',                          ph:'+91-124-253-7555', email:'info@nhpcindia.com'},
+  KSEB:    {name:'Kerala State Electricity Board',        ph:'+91-471-255-5544', email:'secretary@kseb.in'},
+  DVC:     {name:'Damodar Valley Corporation',            ph:'+91-33-2212-9000', email:'cmd@dvc.gov.in'},
+  CWC:     {name:'Central Water Commission',              ph:'+91-11-2610-3978', email:'cwc@nic.in'},
+  KPCL:    {name:'Karnataka Power Corp Ltd',              ph:'+91-80-2237-4580', email:'cmd@kpcl.in'},
+  KWRD:    {name:'Karnataka Water Resources Dept',        ph:'+91-80-2225-3344', email:'secy-wrd@karnataka.gov.in'},
+  OWRD:    {name:'Odisha Water Resources Dept',           ph:'+91-674-239-1414', email:'wr.od@nic.in'},
+  MWRD:    {name:'Maharashtra Water Resources Dept',      ph:'+91-22-2202-5226', email:'wrd@maharashtra.gov.in'},
+  MPWRD:   {name:'MP Water Resources Dept',               ph:'+91-755-255-4992', email:'wrd@mp.gov.in'},
+  TNWRD:   {name:'Tamil Nadu Water Resources Dept',       ph:'+91-44-2859-2829', email:'cewr@tn.gov.in'},
+  TSIDD:   {name:'Telangana Irrigation & CAD Dept',       ph:'+91-40-2345-6802', email:'irrigation@telangana.gov.in'},
+  TSGENCO: {name:'TS Power Generation Corporation',       ph:'+91-40-2345-6782', email:'info@tsgenco.telangana.gov.in'},
+  APWRD:   {name:'AP Water Resources Dept',               ph:'+91-863-234-0024', email:'irrigation.ap@ap.gov.in'},
+  RAJWRD:  {name:'Rajasthan Water Resources Dept',        ph:'+91-141-270-0811', email:'ce-wrd@rajasthan.gov.in'},
+  UKJVN:   {name:'Uttarakhand Jal Vidyut Nigam Ltd',      ph:'+91-135-271-0028', email:'info@ujvnl.com'},
+  UPIRD:   {name:'UP Irrigation Dept',                    ph:'+91-522-223-6888', email:'ce-irrigation@up.gov.in'},
+  SJVNL:   {name:'SJVN Limited',                         ph:'+91-177-266-0205', email:'info@sjvn.nic.in'},
+  NTPC:    {name:'NTPC Limited',                          ph:'+91-11-2436-0100', email:'ntpc@ntpc.co.in'},
+  NEEPCO:  {name:'North Eastern Electric Power Corp',     ph:'+91-364-250-1399', email:'info@neepco.co.in'},
+  JKPDD:   {name:'J&K Power Development Dept',            ph:'+91-194-247-4313', email:'jkpdd@jk.gov.in'},
+  MKVDC:   {name:'Maharashtra Krishna Valley Dev Corp',   ph:'+91-416-222-0133', email:'mkvdckop@gmail.com'},
+  GUJWRD:  {name:'Gujarat Water Resources Dept',          ph:'+91-79-2325-0536', email:'wrd-guj@gujarat.gov.in'},
+  WBWRD:   {name:'West Bengal Water Resources Dept',      ph:'+91-33-2286-2021', email:'wridd@wb.gov.in'},
+  BIHWRD:  {name:'Bihar Water Resources Dept',            ph:'+91-612-221-5431', email:'wrd-bih@nic.in'},
+  GOAWRD:  {name:'Goa Water Resources Dept',              ph:'+91-832-241-9800', email:'wrd@goa.gov.in'},
+  JHWRD:   {name:'Jharkhand Water Resources Dept',        ph:'+91-651-249-0636', email:'wrd.jhar@nic.in'},
+  MEGHWRD: {name:'Meghalaya Water Resources Dept',        ph:'+91-364-222-2411', email:'pwdwrs.meg@nic.in'},
+  NAGPDD:  {name:'Nagaland Power Dept',                   ph:'+91-370-229-0826', email:'dop.ngl@nic.in'},
+  MANPDD:  {name:'Manipur Power Dept',                    ph:'+91-385-245-0870', email:'powerdepart@manipur.gov.in'},
+  HPPCL:   {name:'HP Power Corp Ltd',                     ph:'+91-177-280-4000', email:'info@hppcl.com'},
+  CSWRD:   {name:'Chhattisgarh Water Resources Dept',     ph:'+91-771-223-4568', email:'wrd.cg@gov.in'},
+  ARWRD:   {name:'Arunachal Pradesh Water Resources',     ph:'+91-360-221-2321', email:'wrd.ar@nic.in'},
+  ASSAM:   {name:'Assam Water Resources Dept',            ph:'+91-361-223-7680', email:'wrd.assam@nic.in'},
+};
+
+const DAM_AGENCY = {
+  'Tehri Dam':'THDC','Bhakra Dam':'BBMB','Sardar Sarovar Dam':'SSNNL',
+  'Nagarjuna Sagar Dam':'TSIDD','Hirakud Dam':'OWRD','Idukki Arch Dam':'KSEB',
+  'Koyna Dam':'MKVDC','Srisailam Dam':'TSGENCO','Tungabhadra Dam':'KWRD',
+  'Mettur Dam':'TNWRD','Krishnaraja Sagara':'KWRD','Gobind Ballabh Pant Sagar':'UPIRD',
+  'Gandhi Sagar Dam':'MPWRD','Indira Sagar Dam':'MPWRD','Omkareshwar Dam':'MPWRD',
+  'Bargi Dam':'MPWRD','Bansagar Dam':'MPWRD','Tawa Dam':'MPWRD','Pench Reservoir':'MPWRD',
+  'Pong Dam':'BBMB','Ranjit Sagar Dam':'NHPC','Periyar Dam':'KSEB','Mullaperiyar Dam':'KSEB',
+  'Ukai Dam':'GUJWRD','Maithon Dam':'DVC','Panchet Dam':'DVC','Tilaiya Dam':'DVC',
+  'Kangsabati Dam':'WBWRD','Jayakwadi Dam':'MWRD','Ujjani Dam':'MWRD',
+  'Rana Pratap Sagar':'RAJWRD','Bisalpur Dam':'RAJWRD','Mahi Bajaj Sagar':'RAJWRD',
+  'Ramganga Dam':'UPIRD','Parambikulam Dam':'KSEB','Malampuzha Dam':'KSEB',
+  'Banasura Sagar':'KSEB','Kabini Dam':'KWRD','Hemavathi Dam':'KWRD','Harangi Dam':'KWRD',
+  'Almatti Dam':'KWRD','Narayanpur Dam':'KWRD','Malaprabha Dam':'KWRD',
+  'Matatila Dam':'UPIRD','Machkund Dam':'OWRD','Balimela Dam':'NHPC',
+  'Upper Kolab Dam':'OWRD','Rengali Dam':'OWRD','Umiam Dam':'MEGHWRD',
+  'Doyang Dam':'NAGPDD','Loktak Lake Barrage':'MANPDD','Kadana Dam':'GUJWRD',
+  'Dharoi Dam':'GUJWRD','Kalinadi Dam (Supa)':'KPCL','Lower Bhavani Dam':'TNWRD',
+  'Amaravathi Dam':'TNWRD','Sathanur Dam':'TNWRD','Papanasam Dam':'TNWRD',
+  'Siruvani Dam':'TNWRD','Peechi Dam':'KSEB','Kallada Dam':'KSEB',
+  'Nathpa Jhakri Dam':'SJVNL','Kol Dam':'NTPC','Salal Dam':'NHPC',
+  'Baglihar Dam':'NHPC','Dulhasti Dam':'NHPC','Uri Dam':'NHPC','Pandoh Dam':'BBMB',
+  'Bairasiul Dam':'NHPC','Chamera Dam':'NHPC','Ranganadi Dam':'NEEPCO','Kopili Dam':'NEEPCO',
+  'Polavaram Dam':'APWRD','Sriram Sagar':'TSIDD','Somasila Dam':'APWRD',
+  'Salaulim Dam':'GOAWRD','Bhatsa Dam':'MWRD','Vaitarna Dam':'MWRD',
+  'Radhanagari Dam':'MWRD','Jawahar Sagar Dam':'RAJWRD','Parbati Dam (Rajasthan)':'RAJWRD',
+  'Farakka Barrage':'CWC','Linganamakki Dam':'KPCL','Varahi Dam':'KPCL',
+  'Manjra Dam':'TSIDD','Nizam Sagar':'TSIDD','Singur Dam':'TSIDD','Osmansagar':'TSIDD',
+  'Rajghat Dam':'MPWRD','Vaigai Dam':'TNWRD','Aji Dam':'GUJWRD','Shetrunji Dam':'GUJWRD',
+  'Damanganga Dam':'GUJWRD','Warna Dam':'MWRD','Dhom Dam':'MWRD','Yeldari Dam':'MWRD',
+  'Kukdi Dam':'MWRD','Koshi Barrage':'BIHWRD','Gandak Dam':'BIHWRD',
+  'Massanjore Dam':'WBWRD','Narmada Sagar (Bargi)':'MPWRD','Larji Dam':'HPPCL',
+  'Parbati Dam (HP)':'NHPC','Karcham Wangtoo Dam':'NHPC','Baspa II Dam':'HPPCL',
+  'Kundah Dam':'TNWRD','Krishnagiri Dam':'TNWRD','Peechi Reservoir':'KSEB',
+  'Idamalayar Dam':'KSEB','Karapuzha Dam':'KSEB','Meenachil Dam':'KSEB',
+  'Mula Dam':'MWRD','Isapur Dam':'MWRD','Lower Wardha Dam':'MWRD','Kota Barrage':'RAJWRD',
+  'Gomukhi Dam':'TNWRD','Supa Dam':'KPCL','Hivre Dam':'MWRD','Nira Deoghar Dam':'MWRD',
+  'Tandula Dam':'CSWRD','Minimata Hasdeo Bango':'CSWRD','Gangrel Dam':'CSWRD',
+  'Mrugavani Reservoir':'TSIDD','Srikhanda Dam':'WBWRD',
+  'Lakhwar Dam':'UKJVN','Vyasi Dam':'UKJVN',
+};
+
+// ═══════════════════════════════════════════════════════════════
 // GOOGLE MAPS INIT
 // ═══════════════════════════════════════════════════════════════
 let map, markers=[], heatmap, osmLayer=[], resLayer=[];
@@ -640,8 +724,21 @@ function getMarkerSize(cap){
   return Math.max(5, Math.min(18, 3+Math.log10(Math.max(1,cap))*4));
 }
 
+function getAgency(name){ const c=DAM_AGENCY[name]; return c?AGENCIES[c]:null; }
+
+function agencyHtml(ag){
+  if(!ag) return `<div style="margin-top:8px;font-size:.7rem;color:#334155;border-top:1px solid #1e293b;padding-top:8px">Agency info not available</div>`;
+  return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e293b">
+    <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.8px;color:#475569;margin-bottom:4px">Managing Agency</div>
+    <div style="color:#38bdf8;font-weight:600;font-size:.82rem;margin-bottom:5px">${ag.name}</div>
+    <a href="tel:${ag.ph}" style="display:block;color:#22c55e;font-size:.78rem;text-decoration:none;margin-bottom:3px">&#128222; ${ag.ph}</a>
+    <a href="mailto:${ag.email}" style="display:block;color:#60a5fa;font-size:.78rem;text-decoration:none">&#9993; ${ag.email}</a>
+  </div>`;
+}
+
 function buildInfoHtml(d){
   const purposes=(d.pur||'—').split(',').map(p=>`<span class="ptag">${p.trim()}</span>`).join('');
+  const ag=getAgency(d.n);
   return `<div class="gm-iw-name">${d.n}</div>
     <div class="gm-iw-row"><span class="gm-iw-k">River</span><span class="gm-iw-v">${d.river||'—'}</span></div>
     <div class="gm-iw-row"><span class="gm-iw-k">State</span><span class="gm-iw-v">${d.state||'—'}</span></div>
@@ -650,11 +747,24 @@ function buildInfoHtml(d){
     ${d.cap?`<div class="gm-iw-row"><span class="gm-iw-k">Capacity</span><span class="gm-iw-v">${d.cap.toLocaleString()} MCM</span></div>`:''}
     ${d.type?`<div class="gm-iw-row"><span class="gm-iw-k">Type</span><span class="gm-iw-v" style="text-transform:capitalize">${d.type}</span></div>`:''}
     ${d.basin?`<div class="gm-iw-row"><span class="gm-iw-k">Basin</span><span class="gm-iw-v">${d.basin}</span></div>`:''}
-    <div style="margin-top:6px">${purposes}</div>`;
+    <div style="margin-top:6px">${purposes}</div>
+    ${agencyHtml(ag)}`;
 }
 
 function showSideInfo(d){
   const purposes=(d.pur||'—').split(',').map(p=>`<span class="ptag">${p.trim()}</span>`).join('');
+  const ag=getAgency(d.n);
+  const agBlock=ag?`
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e293b">
+      <div class="sec-title" style="margin-bottom:6px">Managing Agency</div>
+      <div style="color:#38bdf8;font-weight:600;font-size:.82rem;margin-bottom:6px">${ag.name}</div>
+      <a href="tel:${ag.ph}" style="display:flex;align-items:center;gap:6px;color:#22c55e;font-size:.8rem;text-decoration:none;padding:5px 8px;background:#0f172a;border-radius:6px;margin-bottom:5px;border:1px solid #1e293b">
+        <span>&#128222;</span><span>${ag.ph}</span>
+      </a>
+      <a href="mailto:${ag.email}" style="display:flex;align-items:center;gap:6px;color:#60a5fa;font-size:.78rem;text-decoration:none;padding:5px 8px;background:#0f172a;border-radius:6px;border:1px solid #1e293b;word-break:break-all">
+        <span>&#9993;</span><span>${ag.email}</span>
+      </a>
+    </div>`:`<div style="margin-top:8px;font-size:.72rem;color:#334155">Agency contact not available</div>`;
   document.getElementById('infobox').innerHTML=`
     <div class="ibadge">${d.type||'dam'} · ${d.basin||'—'}</div>
     <div class="iname">${d.n}</div>
@@ -664,7 +774,8 @@ function showSideInfo(d){
     ${d.ht?`<div class="ir"><span class="ik">Height</span><span class="iv">${d.ht} m</span></div>`:''}
     ${d.cap?`<div class="ir"><span class="ik">Capacity</span><span class="iv">${d.cap.toLocaleString()} MCM</span></div>`:''}
     <div class="ir"><span class="ik">Purpose</span></div>
-    <div style="padding-top:4px">${purposes}</div>`;
+    <div style="padding-top:4px">${purposes}</div>
+    ${agBlock}`;
   switchTab('info', document.querySelector('.tab:last-child'));
 }
 
