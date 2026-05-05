@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>India Dams & Water Bodies — Google Earth View</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#080c18;color:#e2e8f0;overflow:hidden}
+#app,#api-modal,#loading{position:fixed;inset:0}
+
+/* ── API KEY MODAL ── */
+#api-modal{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 30%,#0f2044 0%,#080c18 70%);z-index:9999}
+#api-card{background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:36px 40px;max-width:480px;width:90%;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.7)}
+#api-card .icon{font-size:3rem;margin-bottom:12px}
+#api-card h2{font-size:1.5rem;font-weight:700;color:#38bdf8;margin-bottom:8px}
+#api-card .desc{font-size:.85rem;color:#64748b;margin-bottom:24px;line-height:1.6}
+#api-input{
+  width:100%;background:#080c18;border:1px solid #334155;border-radius:8px;
+  padding:12px 16px;color:#e2e8f0;font-size:.9rem;outline:none;
+  font-family:monospace;letter-spacing:.5px;margin-bottom:12px
+}
+#api-input:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.1)}
+#api-input::placeholder{color:#334155;font-family:'Segoe UI',sans-serif;letter-spacing:0}
+#api-btn{
+  width:100%;background:linear-gradient(135deg,#0369a1,#0ea5e9);border:none;border-radius:8px;
+  padding:12px;color:white;font-size:.95rem;font-weight:600;cursor:pointer;
+  transition:all .2s;margin-bottom:16px
+}
+#api-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(14,165,233,.3)}
+#api-note{font-size:.75rem;color:#475569;line-height:1.8}
+#api-note a{color:#38bdf8;text-decoration:none}
+#api-note a:hover{text-decoration:underline}
+.api-tip{margin-top:16px;background:#1e293b;border-radius:8px;padding:12px;font-size:.75rem;color:#64748b;text-align:left;line-height:1.8}
+.api-tip b{color:#94a3b8}
+#saved-key-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;font-size:.78rem;color:#64748b}
+#use-saved-btn{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:4px 12px;color:#38bdf8;font-size:.75rem;cursor:pointer}
+
+/* ── LOADING ── */
+#loading{display:none;flex-direction:column;align-items:center;justify-content:center;background:#080c18;z-index:9998}
+.spinner{width:52px;height:52px;border:3px solid #1e293b;border-top-color:#38bdf8;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{margin-top:14px;color:#64748b;font-size:.85rem}
+#load-step{color:#38bdf8;font-size:.78rem;margin-top:6px}
+
+/* ── MAIN APP ── */
+#app{display:none;flex-direction:column}
+#header{
+  background:linear-gradient(90deg,#050810 0%,#0a1628 40%,#050810 100%);
+  border-bottom:1px solid #1e293b;padding:10px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;z-index:500;height:52px
+}
+#header h1{font-size:1.1rem;font-weight:700;color:#38bdf8}
+#header .sub{font-size:.68rem;color:#475569;margin-top:1px}
+.hdr-stats{display:flex;gap:10px}
+.hstat{font-size:.72rem;background:#0f172a;border:1px solid #1e293b;border-radius:20px;padding:3px 12px;color:#94a3b8}
+.hstat span{color:#38bdf8;font-weight:700}
+#hdr-actions{display:flex;gap:8px;align-items:center}
+.hdr-btn{background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:4px 10px;color:#64748b;font-size:.72rem;cursor:pointer;transition:all .15s}
+.hdr-btn:hover{border-color:#38bdf8;color:#38bdf8}
+
+/* ── LAYOUT ── */
+#main{display:flex;flex:1;overflow:hidden}
+#sidebar{width:300px;min-width:300px;background:#080c18;border-right:1px solid #1e293b;display:flex;flex-direction:column;overflow:hidden}
+#map{flex:1;position:relative}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid #1e293b;flex-shrink:0}
+.tab{flex:1;background:none;border:none;padding:10px 4px;color:#475569;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.8px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:#38bdf8;border-bottom-color:#38bdf8}
+.tab:hover:not(.active){color:#94a3b8}
+.tab-content{display:none;flex:1;overflow-y:auto;flex-direction:column}
+.tab-content.active{display:flex}
+.tab-content::-webkit-scrollbar{width:3px}
+.tab-content::-webkit-scrollbar-track{background:#080c18}
+.tab-content::-webkit-scrollbar-thumb{background:#1e293b;border-radius:3px}
+
+/* ── SIDEBAR ELEMENTS ── */
+.sec{padding:14px 16px;border-bottom:1px solid #0f172a}
+.sec-title{font-size:.62rem;text-transform:uppercase;letter-spacing:1.2px;color:#334155;margin-bottom:10px;font-weight:600}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scard{background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:10px;text-align:center}
+.sval{font-size:1.35rem;font-weight:700;color:#38bdf8;line-height:1}
+.slbl{font-size:.62rem;color:#334155;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+
+/* Layer toggles */
+.trow{display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer}
+.sw{position:relative;width:34px;height:18px;flex-shrink:0}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sl{position:absolute;inset:0;background:#1e293b;border-radius:18px;cursor:pointer;transition:.2s;border:1px solid #334155}
+.sl:before{content:'';position:absolute;width:12px;height:12px;background:#334155;border-radius:50%;left:2px;top:2px;transition:.2s}
+.sw input:checked+.sl{background:#0c4a6e;border-color:#0ea5e9}
+.sw input:checked+.sl:before{transform:translateX(16px);background:#38bdf8}
+.tlbl{font-size:.82rem;color:#94a3b8;flex:1}
+.tcnt{font-size:.68rem;color:#334155;background:#0f172a;padding:2px 7px;border-radius:10px;border:1px solid #1e293b}
+
+/* Basemap buttons */
+.bm-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.bmbtn{background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:5px 10px;color:#475569;font-size:.72rem;cursor:pointer;transition:all .15s}
+.bmbtn.active{background:#0c4a6e;border-color:#0ea5e9;color:#38bdf8}
+
+/* Search */
+#searchbox{width:100%;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:.85rem;outline:none}
+#searchbox:focus{border-color:#38bdf8}
+#searchbox::placeholder{color:#334155}
+#sres{margin-top:8px}
+.sitem{padding:8px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;border:1px solid transparent;margin-bottom:3px;transition:all .15s}
+.sitem:hover{background:#0f172a;border-color:#1e293b}
+.sitem strong{color:#38bdf8;display:block;font-size:.83rem}
+.sitem small{color:#475569}
+
+/* Legend dots */
+.leg{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.75rem;color:#64748b}
+.ld{width:11px;height:11px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.2)}
+
+/* Info panel */
+#infobox{background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:12px;font-size:.8rem;min-height:80px}
+.iph{color:#334155;text-align:center;padding:20px 0;font-size:.78rem}
+.iname{font-size:.95rem;font-weight:600;color:#38bdf8;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #1e293b}
+.ir{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;border-bottom:1px solid #080c18}
+.ir:last-child{border:none}
+.ik{color:#334155;font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;padding-top:1px}
+.iv{color:#e2e8f0;font-weight:500;font-size:.8rem;text-align:right;max-width:58%}
+.ptag{display:inline-block;background:#1e293b;border:1px solid #334155;border-radius:4px;padding:1px 6px;font-size:.65rem;margin:2px 1px;color:#94a3b8}
+.ibadge{display:inline-flex;align-items:center;gap:4px;background:#1e293b;border-radius:4px;padding:2px 7px;font-size:.7rem;color:#64748b;margin-bottom:6px}
+
+/* Filters */
+select.fsel{width:100%;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:.82rem;outline:none;margin-bottom:10px}
+.range-lbl{display:flex;justify-content:space-between;font-size:.72rem;color:#475569;margin-bottom:4px}
+input[type=range]{width:100%;accent-color:#38bdf8;margin-bottom:10px}
+.filter-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.ftag{background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:4px 9px;color:#475569;font-size:.72rem;cursor:pointer;transition:all .15s}
+.ftag.on{background:#0c4a6e;border-color:#0ea5e9;color:#38bdf8}
+
+/* Stats chart area */
+#chart-canvas-wrap{position:relative;height:180px;margin-bottom:4px}
+.chart-note{font-size:.68rem;color:#334155;text-align:center}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:#0ea5e9;color:white;padding:8px 20px;border-radius:20px;
+  font-size:.8rem;font-weight:500;z-index:9000;transition:transform .3s;pointer-events:none
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Google Maps overrides */
+.gm-style .gm-style-iw-c{background:#0f172a!important;border:1px solid #334155!important;border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.8)!important;padding:0!important}
+.gm-style .gm-style-iw-d{overflow:hidden!important;padding:12px 16px!important}
+.gm-style .gm-style-iw-t::after{background:#0f172a!important}
+.gm-style .gm-style-iw-chr{display:none!important}
+.gm-iw-name{font-size:.95rem;font-weight:700;color:#38bdf8;margin-bottom:8px;font-family:'Segoe UI',sans-serif}
+.gm-iw-row{display:flex;justify-content:space-between;gap:20px;font-size:.78rem;padding:3px 0;border-bottom:1px solid #1e293b;font-family:'Segoe UI',sans-serif}
+.gm-iw-row:last-child{border:none}
+.gm-iw-k{color:#475569}
+.gm-iw-v{color:#e2e8f0;font-weight:500}
+
+/* Mobile */
+#mob-toggle{display:none;position:fixed;bottom:20px;right:20px;z-index:8000;background:#0ea5e9;border:none;border-radius:50%;width:46px;height:46px;color:white;font-size:1.3rem;cursor:pointer;box-shadow:0 4px 16px rgba(14,165,233,.4)}
+@media(max-width:768px){
+  #sidebar{display:none;position:fixed;inset:0;width:100%;z-index:7000;overflow-y:auto}
+  #sidebar.mob-open{display:flex}
+  #mob-toggle{display:flex;align-items:center;justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<!-- ── API KEY MODAL ── -->
+<div id="api-modal">
+  <div id="api-card">
+    <div class="icon">🛰️</div>
+    <h2>India Dams — Google Earth View</h2>
+    <p class="desc">Real Google Earth satellite imagery of every major dam and water body across India. Enter your Google Maps API key to begin.</p>
+    <input id="api-input" type="text" placeholder="Paste your Google Maps API key (AIza…)"/>
+    <button id="api-btn" onclick="launchMap()">Launch Satellite Map →</button>
+    <div id="api-note">
+      No key? <a href="https://console.cloud.google.com/google/maps-apis/credentials" target="_blank">Get one free at Google Cloud Console</a> — enable <b>Maps JavaScript API</b> + <b>Visualization API</b>
+    </div>
+    <div class="api-tip">
+      <b>Quick setup:</b><br>
+      1. Go to Google Cloud Console → APIs &amp; Services<br>
+      2. Enable "Maps JavaScript API" and "Maps JavaScript API – Visualization library"<br>
+      3. Create credentials → API Key → paste above
+    </div>
+    <div id="saved-key-row" style="display:none">
+      Saved key found — <button id="use-saved-btn" onclick="useSavedKey()">Use saved key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── LOADING ── -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Connecting to Google Earth…</p>
+  <div id="load-step">Loading satellite tiles</div>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="app" style="display:none;flex-direction:column;height:100vh">
+  <div id="header">
+    <div>
+      <div id="header-title" style="display:flex;align-items:center;gap:10px">
+        <h1>🛰 India Dams &amp; Water Bodies</h1>
+      </div>
+      <div class="sub">Google Earth Satellite · 130+ Curated Dams · OpenStreetMap Data</div>
+    </div>
+    <div class="hdr-stats">
+      <div class="hstat">Major: <span id="hs-major">—</span></div>
+      <div class="hstat">OSM: <span id="hs-osm">—</span></div>
+      <div class="hstat">Reservoirs: <span id="hs-res">—</span></div>
+    </div>
+    <div id="hdr-actions">
+      <button class="hdr-btn" onclick="map&&map.setCenter({lat:22,lng:80})&&map.setZoom(5)">Reset View</button>
+      <button class="hdr-btn" onclick="showApiModal()">Change Key</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('layers',this)">Layers</button>
+        <button class="tab" onclick="switchTab('search',this)">Search</button>
+        <button class="tab" onclick="switchTab('stats',this)">Stats</button>
+        <button class="tab" onclick="switchTab('filter',this)">Filter</button>
+        <button class="tab" onclick="switchTab('info',this)">Info</button>
+      </div>
+
+      <!-- LAYERS TAB -->
+      <div class="tab-content active" id="tc-layers">
+        <div class="sec">
+          <div class="sec-title">Quick Stats</div>
+          <div class="stat-grid">
+            <div class="scard"><div class="sval" id="sv-major">—</div><div class="slbl">Curated Dams</div></div>
+            <div class="scard"><div class="sval" id="sv-osm">—</div><div class="slbl">OSM Dams</div></div>
+            <div class="scard"><div class="sval">5,745</div><div class="slbl">India Total</div></div>
+            <div class="scard"><div class="sval">91M</div><div class="slbl">Ha Irrigated</div></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-title">Data Layers</div>
+          <div class="trow"><label class="sw"><input type="checkbox" id="tgl-major" checked><span class="sl"></span></label><span class="tlbl">Major Dams (curated)</span><span class="tcnt" id="c-major">0</span></div>
+          <div class="trow"><label class="sw"><input type="checkbox" id="tgl-osm" checked><span class="sl"></span></label><span class="tlbl">All Dams (OpenStreetMap)</span><span class="tcnt" id="c-osm">—</span></div>
+          <div class="trow"><label class="sw"><input type="checkbox" id="tgl-heat"><span class="sl"></span></label><span class="tlbl">Heatmap (capacity-weighted)</span></div>
+          <div class="trow"><label class="sw"><input type="checkbox" id="tgl-res"><span class="sl"></span></label><span class="tlbl">Reservoirs &amp; Lakes</span><span class="tcnt" id="c-res">—</span></div>
+          <div class="trow"><label class="sw"><input type="checkbox" id="tgl-rivers"><span class="sl"></span></label><span class="tlbl">River Network</span></div>
+        </div>
+        <div class="sec">
+          <div class="sec-title">Map Style</div>
+          <div class="bm-row">
+            <button class="bmbtn active" onclick="setMapType('hybrid',this)">Hybrid (Earth)</button>
+            <button class="bmbtn" onclick="setMapType('satellite',this)">Satellite</button>
+            <button class="bmbtn" onclick="setMapType('terrain',this)">Terrain</button>
+            <button class="bmbtn" onclick="setMapType('roadmap',this)">Road Map</button>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-title">Purpose Legend</div>
+          <div class="leg"><div class="ld" style="background:#f59e0b"></div>Multipurpose (Irrigation + Power)</div>
+          <div class="leg"><div class="ld" style="background:#a855f7"></div>Primarily Hydropower</div>
+          <div class="leg"><div class="ld" style="background:#22c55e"></div>Primarily Irrigation</div>
+          <div class="leg"><div class="ld" style="background:#3b82f6"></div>Water Supply</div>
+          <div class="leg"><div class="ld" style="background:#ef4444"></div>Flood Control</div>
+          <div class="leg"><div class="ld" style="background:#94a3b8"></div>Other / Unknown</div>
+          <div style="margin-top:10px;font-size:.7rem;color:#334155">Marker size ∝ storage capacity (MCM)</div>
+        </div>
+      </div>
+
+      <!-- SEARCH TAB -->
+      <div class="tab-content" id="tc-search">
+        <div class="sec">
+          <div class="sec-title">Find a Dam</div>
+          <input id="searchbox" type="text" placeholder="Dam name, river, or state…"/>
+          <div id="sres"></div>
+        </div>
+      </div>
+
+      <!-- STATS TAB -->
+      <div class="tab-content" id="tc-stats">
+        <div class="sec">
+          <div class="sec-title">Dams by State (curated)</div>
+          <div id="chart-canvas-wrap"><canvas id="state-chart"></canvas></div>
+          <div class="chart-note">Click bars to filter map</div>
+        </div>
+        <div class="sec">
+          <div class="sec-title">By Purpose</div>
+          <div id="chart-canvas-wrap2" style="position:relative;height:160px"><canvas id="pur-chart"></canvas></div>
+        </div>
+        <div class="sec">
+          <div class="sec-title">Tallest Dams</div>
+          <div id="tallest-list" style="font-size:.78rem"></div>
+        </div>
+        <div class="sec">
+          <div class="sec-title">Largest by Capacity</div>
+          <div id="largest-list" style="font-size:.78rem"></div>
+        </div>
+      </div>
+
+      <!-- FILTER TAB -->
+      <div class="tab-content" id="tc-filter">
+        <div class="sec">
+          <div class="sec-title">State</div>
+          <select class="fsel" id="f-state"><option value="">All States</option></select>
+          <div class="sec-title">River Basin</div>
+          <select class="fsel" id="f-basin"><option value="">All Basins</option></select>
+          <div class="sec-title">Dam Type</div>
+          <div class="filter-tags" id="f-type-tags"></div>
+        </div>
+        <div class="sec">
+          <div class="sec-title">Construction Year</div>
+          <div class="range-lbl"><span>1895</span><span id="yr-val">2023</span></div>
+          <input type="range" id="f-year" min="1895" max="2023" value="2023" step="1" oninput="document.getElementById('yr-val').textContent=this.value;applyFilters()">
+        </div>
+        <div class="sec">
+          <div class="sec-title">Minimum Height (m)</div>
+          <div class="range-lbl"><span>0 m</span><span id="ht-val">0 m</span></div>
+          <input type="range" id="f-height" min="0" max="260" value="0" step="5" oninput="document.getElementById('ht-val').textContent=this.value+' m';applyFilters()">
+          <div class="sec-title">Min. Capacity (MCM)</div>
+          <div class="range-lbl"><span>0</span><span id="cap-val">0</span></div>
+          <input type="range" id="f-cap" min="0" max="5000" value="0" step="50" oninput="document.getElementById('cap-val').textContent=this.value;applyFilters()">
+        </div>
+        <div class="sec">
+          <div class="sec-title">Purpose</div>
+          <div class="filter-tags" id="f-pur-tags"></div>
+        </div>
+        <div class="sec">
+          <button onclick="resetFilters()" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:8px;color:#64748b;font-size:.82rem;cursor:pointer">Reset All Filters</button>
+        </div>
+      </div>
+
+      <!-- INFO TAB -->
+      <div class="tab-content" id="tc-info">
+        <div class="sec">
+          <div class="sec-title">Selected Dam</div>
+          <div id="infobox"><div class="iph">Click any dam marker on the map</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<button id="mob-toggle" onclick="document.getElementById('sidebar').classList.toggle('mob-open')">☰</button>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATASET — 130+ Indian Dams
+// Fields: n,lat,lon,river,state,yr,ht,cap,pur,type,basin
+// ht=height(m), cap=capacity(MCM), type=dam construction type
+// ═══════════════════════════════════════════════════════════════
+const DAMS = [
+  {n:"Tehri Dam",lat:30.3765,lon:78.4805,river:"Bhagirathi",state:"Uttarakhand",yr:2006,ht:260.5,cap:3540,pur:"Hydropower,Irrigation,Water Supply",type:"rockfill",basin:"Ganga"},
+  {n:"Bhakra Dam",lat:31.4109,lon:76.4357,river:"Sutlej",state:"Himachal Pradesh",yr:1963,ht:226,cap:9340,pur:"Hydropower,Irrigation,Flood Control",type:"gravity",basin:"Indus"},
+  {n:"Sardar Sarovar Dam",lat:21.8311,lon:73.7482,river:"Narmada",state:"Gujarat",yr:2017,ht:138.68,cap:9460,pur:"Irrigation,Water Supply,Hydropower",type:"gravity",basin:"Narmada"},
+  {n:"Nagarjuna Sagar Dam",lat:16.5742,lon:79.3175,river:"Krishna",state:"Telangana",yr:1967,ht:124,cap:11472,pur:"Irrigation,Hydropower",type:"masonry",basin:"Krishna"},
+  {n:"Hirakud Dam",lat:21.5255,lon:83.867,river:"Mahanadi",state:"Odisha",yr:1957,ht:60.96,cap:8105,pur:"Flood Control,Irrigation,Hydropower",type:"composite",basin:"Mahanadi"},
+  {n:"Idukki Arch Dam",lat:9.8467,lon:77.1025,river:"Periyar",state:"Kerala",yr:1976,ht:169,cap:1460,pur:"Hydropower",type:"arch",basin:"West Coast"},
+  {n:"Koyna Dam",lat:17.4,lon:73.75,river:"Koyna",state:"Maharashtra",yr:1964,ht:103,cap:2797,pur:"Hydropower,Irrigation",type:"gravity",basin:"West Coast"},
+  {n:"Srisailam Dam",lat:16.0869,lon:78.9005,river:"Krishna",state:"Telangana",yr:1981,ht:145,cap:8722,pur:"Hydropower,Irrigation",type:"gravity",basin:"Krishna"},
+  {n:"Tungabhadra Dam",lat:15.2665,lon:76.3338,river:"Tungabhadra",state:"Karnataka",yr:1953,ht:49.5,cap:3722,pur:"Irrigation,Hydropower",type:"composite",basin:"Krishna"},
+  {n:"Mettur Dam",lat:11.7944,lon:77.8003,river:"Cauvery",state:"Tamil Nadu",yr:1934,ht:65.6,cap:2641,pur:"Irrigation,Hydropower",type:"gravity",basin:"Cauvery"},
+  {n:"Krishnaraja Sagara",lat:12.4324,lon:76.5702,river:"Cauvery",state:"Karnataka",yr:1932,ht:40.5,cap:1369,pur:"Irrigation,Hydropower",type:"gravity",basin:"Cauvery"},
+  {n:"Gobind Ballabh Pant Sagar",lat:24.2012,lon:83.0196,river:"Rihand",state:"Uttar Pradesh",yr:1962,ht:91.44,cap:10600,pur:"Hydropower",type:"gravity",basin:"Ganga"},
+  {n:"Gandhi Sagar Dam",lat:24.713,lon:75.5544,river:"Chambal",state:"Madhya Pradesh",yr:1960,ht:62.17,cap:7322,pur:"Hydropower,Irrigation",type:"gravity",basin:"Ganga"},
+  {n:"Indira Sagar Dam",lat:22.2734,lon:76.4629,river:"Narmada",state:"Madhya Pradesh",yr:2005,ht:92,cap:12220,pur:"Hydropower,Irrigation",type:"earthfill",basin:"Narmada"},
+  {n:"Omkareshwar Dam",lat:22.2281,lon:76.1391,river:"Narmada",state:"Madhya Pradesh",yr:2007,ht:73,cap:1170,pur:"Hydropower",type:"gravity",basin:"Narmada"},
+  {n:"Bargi Dam",lat:23.04,lon:79.93,river:"Narmada",state:"Madhya Pradesh",yr:1990,ht:69.8,cap:3921,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Narmada"},
+  {n:"Bansagar Dam",lat:24.1666,lon:81.4166,river:"Son",state:"Madhya Pradesh",yr:2006,ht:67.3,cap:5410,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Ganga"},
+  {n:"Tawa Dam",lat:22.5862,lon:78.0308,river:"Tawa",state:"Madhya Pradesh",yr:1978,ht:58,cap:2110,pur:"Irrigation",type:"earthfill",basin:"Narmada"},
+  {n:"Pench Reservoir",lat:21.75,lon:79.25,river:"Pench",state:"Madhya Pradesh",yr:1973,ht:43,cap:936,pur:"Irrigation",type:"earthfill",basin:"Ganga"},
+  {n:"Pong Dam",lat:32.0,lon:75.9,river:"Beas",state:"Himachal Pradesh",yr:1974,ht:132.6,cap:8570,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Indus"},
+  {n:"Ranjit Sagar Dam",lat:32.5,lon:75.8,river:"Ravi",state:"Punjab",yr:2001,ht:160,cap:3280,pur:"Hydropower,Irrigation",type:"rockfill",basin:"Indus"},
+  {n:"Periyar Dam",lat:9.5189,lon:77.1545,river:"Periyar",state:"Kerala",yr:1895,ht:48.5,cap:443,pur:"Irrigation",type:"masonry",basin:"West Coast"},
+  {n:"Mullaperiyar Dam",lat:9.5231,lon:77.1417,river:"Periyar",state:"Kerala",yr:1895,ht:53.65,cap:443,pur:"Irrigation,Water Supply",type:"masonry",basin:"West Coast"},
+  {n:"Ukai Dam",lat:21.25,lon:73.57,river:"Tapi",state:"Gujarat",yr:1972,ht:80.77,cap:8511,pur:"Flood Control,Irrigation,Hydropower",type:"earthfill",basin:"Tapi"},
+  {n:"Maithon Dam",lat:23.7487,lon:86.8479,river:"Barakar",state:"Jharkhand",yr:1957,ht:48.3,cap:1360,pur:"Flood Control,Hydropower",type:"earthfill",basin:"Ganga"},
+  {n:"Panchet Dam",lat:23.667,lon:86.81,river:"Damodar",state:"Jharkhand",yr:1959,ht:40.2,cap:1476,pur:"Flood Control,Hydropower,Irrigation",type:"earthfill",basin:"Ganga"},
+  {n:"Tilaiya Dam",lat:24.107,lon:85.68,river:"Barakar",state:"Jharkhand",yr:1953,ht:30.1,cap:396,pur:"Hydropower,Irrigation",type:"gravity",basin:"Ganga"},
+  {n:"Kangsabati Dam",lat:23.1,lon:86.9,river:"Kangsabati",state:"West Bengal",yr:1956,ht:38.1,cap:1131,pur:"Irrigation",type:"earthfill",basin:"East Coast"},
+  {n:"Jayakwadi Dam",lat:19.4873,lon:75.3757,river:"Godavari",state:"Maharashtra",yr:1976,ht:41.3,cap:2909,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Godavari"},
+  {n:"Ujjani Dam",lat:18.068,lon:74.73,river:"Bhima",state:"Maharashtra",yr:1980,ht:56,cap:3318,pur:"Irrigation",type:"earthfill",basin:"Krishna"},
+  {n:"Rana Pratap Sagar",lat:24.9355,lon:75.5722,river:"Chambal",state:"Rajasthan",yr:1970,ht:53.9,cap:2950,pur:"Hydropower",type:"gravity",basin:"Ganga"},
+  {n:"Bisalpur Dam",lat:26.0287,lon:74.9055,river:"Banas",state:"Rajasthan",yr:1999,ht:39.5,cap:1086,pur:"Water Supply,Irrigation",type:"earthfill",basin:"Ganga"},
+  {n:"Mahi Bajaj Sagar",lat:23.5,lon:74.1,river:"Mahi",state:"Rajasthan",yr:1983,ht:73,cap:5884,pur:"Irrigation,Hydropower",type:"earthfill",basin:"West Coast"},
+  {n:"Ramganga Dam",lat:29.6,lon:78.9,river:"Ramganga",state:"Uttarakhand",yr:1978,ht:128,cap:2447,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Ganga"},
+  {n:"Parambikulam Dam",lat:10.3734,lon:76.7584,river:"Parambikulam",state:"Kerala",yr:1974,ht:75.9,cap:561,pur:"Irrigation,Hydropower",type:"earthfill",basin:"West Coast"},
+  {n:"Malampuzha Dam",lat:10.8,lon:76.73,river:"Malampuzha",state:"Kerala",yr:1955,ht:46.3,cap:156,pur:"Irrigation",type:"gravity",basin:"West Coast"},
+  {n:"Banasura Sagar",lat:11.65,lon:75.87,river:"Karamanthodu",state:"Kerala",yr:1979,ht:53,cap:209,pur:"Irrigation",type:"earthfill",basin:"West Coast"},
+  {n:"Kabini Dam",lat:11.9805,lon:76.3629,river:"Kabini",state:"Karnataka",yr:1974,ht:30.5,cap:384,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Cauvery"},
+  {n:"Hemavathi Dam",lat:13.1765,lon:75.9887,river:"Hemavathi",state:"Karnataka",yr:1979,ht:58,cap:1047,pur:"Irrigation",type:"earthfill",basin:"Cauvery"},
+  {n:"Harangi Dam",lat:12.5177,lon:75.8948,river:"Harangi",state:"Karnataka",yr:1969,ht:55.7,cap:256,pur:"Irrigation",type:"earthfill",basin:"Cauvery"},
+  {n:"Almatti Dam",lat:16.3311,lon:76.0452,river:"Krishna",state:"Karnataka",yr:2005,ht:53,cap:5491,pur:"Irrigation,Hydropower",type:"gravity",basin:"Krishna"},
+  {n:"Narayanpur Dam",lat:16.1,lon:76.28,river:"Krishna",state:"Karnataka",yr:1980,ht:31.5,cap:966,pur:"Irrigation,Hydropower",type:"gravity",basin:"Krishna"},
+  {n:"Malaprabha Dam",lat:15.7805,lon:75.2003,river:"Malaprabha",state:"Karnataka",yr:1972,ht:42.5,cap:1049,pur:"Irrigation,Water Supply",type:"earthfill",basin:"Krishna"},
+  {n:"Matatila Dam",lat:25.0911,lon:78.382,river:"Betwa",state:"Uttar Pradesh",yr:1958,ht:35,cap:1321,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Ganga"},
+  {n:"Machkund Dam",lat:18.5379,lon:82.2584,river:"Machkund",state:"Odisha",yr:1955,ht:72,cap:375,pur:"Hydropower",type:"masonry",basin:"East Coast"},
+  {n:"Balimela Dam",lat:18.3,lon:82.2,river:"Sileru",state:"Odisha",yr:1972,ht:76.2,cap:3418,pur:"Hydropower",type:"earthfill",basin:"Godavari"},
+  {n:"Upper Kolab Dam",lat:19.09,lon:82.75,river:"Kolab",state:"Odisha",yr:1984,ht:53,cap:2365,pur:"Hydropower,Irrigation",type:"earthfill",basin:"Mahanadi"},
+  {n:"Rengali Dam",lat:21.25,lon:85.01,river:"Brahmani",state:"Odisha",yr:1984,ht:44.5,cap:4250,pur:"Irrigation,Hydropower",type:"earthfill",basin:"East Coast"},
+  {n:"Umiam Dam",lat:25.9,lon:91.88,river:"Umiam",state:"Meghalaya",yr:1965,ht:34,cap:220,pur:"Hydropower",type:"earthfill",basin:"Brahmaputra"},
+  {n:"Doyang Dam",lat:26.15,lon:94.33,river:"Doyang",state:"Nagaland",yr:2000,ht:74,cap:940,pur:"Hydropower",type:"earthfill",basin:"Brahmaputra"},
+  {n:"Loktak Lake Barrage",lat:24.5,lon:93.8,river:"Manipur River",state:"Manipur",yr:1983,ht:30,cap:1600,pur:"Hydropower",type:"earthfill",basin:"Brahmaputra"},
+  {n:"Kadana Dam",lat:23.3042,lon:73.5658,river:"Mahi",state:"Gujarat",yr:1979,ht:66,cap:1726,pur:"Irrigation,Hydropower",type:"gravity",basin:"West Coast"},
+  {n:"Dharoi Dam",lat:23.9667,lon:72.6167,river:"Sabarmati",state:"Gujarat",yr:1978,ht:59.75,cap:1039,pur:"Irrigation",type:"earthfill",basin:"West Coast"},
+  {n:"Kalinadi Dam (Supa)",lat:14.9748,lon:74.567,river:"Kalinadi",state:"Karnataka",yr:1994,ht:100,cap:4524,pur:"Hydropower",type:"earthfill",basin:"West Coast"},
+  {n:"Lower Bhavani Dam",lat:11.4512,lon:77.1,river:"Bhavani",state:"Tamil Nadu",yr:1955,ht:32,cap:993,pur:"Irrigation",type:"gravity",basin:"Cauvery"},
+  {n:"Amaravathi Dam",lat:10.7028,lon:77.2555,river:"Amaravathi",state:"Tamil Nadu",yr:1957,ht:34,cap:1380,pur:"Irrigation",type:"earthfill",basin:"Cauvery"},
+  {n:"Sathanur Dam",lat:12.0597,lon:79.0783,river:"Ponnaiyar",state:"Tamil Nadu",yr:1958,ht:45,cap:640,pur:"Irrigation",type:"earthfill",basin:"East Coast"},
+  {n:"Papanasam Dam",lat:8.7609,lon:77.3455,river:"Tamiraparani",state:"Tamil Nadu",yr:1947,ht:51,cap:148,pur:"Irrigation,Hydropower",type:"gravity",basin:"East Coast"},
+  {n:"Siruvani Dam",lat:11.1093,lon:76.7044,river:"Siruvani",state:"Tamil Nadu",yr:1981,ht:46,cap:149,pur:"Water Supply",type:"gravity",basin:"West Coast"},
+  {n:"Peechi Dam",lat:10.5339,lon:76.4174,river:"Manali",state:"Kerala",yr:1957,ht:48.6,cap:122,pur:"Irrigation,Water Supply",type:"earthfill",basin:"West Coast"},
+  {n:"Kallada Dam",lat:9.0,lon:76.9,river:"Kallada",state:"Kerala",yr:2003,ht:103,cap:509,pur:"Irrigation,Hydropower",type:"earthfill",basin:"West Coast"},
+  {n:"Nathpa Jhakri Dam",lat:31.5625,lon:77.4747,river:"Sutlej",state:"Himachal Pradesh",yr:2004,ht:63,cap:3108,pur:"Hydropower",type:"gravity",basin:"Indus"},
+  {n:"Kol Dam",lat:31.5,lon:76.75,river:"Sutlej",state:"Himachal Pradesh",yr:2014,ht:167,cap:121,pur:"Hydropower",type:"rockfill",basin:"Indus"},
+  {n:"Salal Dam",lat:33.145,lon:74.78,river:"Chenab",state:"Jammu & Kashmir",yr:1987,ht:118,cap:284,pur:"Hydropower",type:"gravity",basin:"Indus"},
+  {n:"Baglihar Dam",lat:33.15,lon:75.08,river:"Chenab",state:"Jammu & Kashmir",yr:2008,ht:143,cap:475,pur:"Hydropower",type:"gravity",basin:"Indus"},
+  {n:"Dulhasti Dam",lat:33.25,lon:75.82,river:"Chenab",state:"Jammu & Kashmir",yr:2007,ht:188,cap:14,pur:"Hydropower",type:"rockfill",basin:"Indus"},
+  {n:"Uri Dam",lat:34.08,lon:74.05,river:"Jhelum",state:"Jammu & Kashmir",yr:1997,ht:68,cap:16,pur:"Hydropower",type:"gravity",basin:"Indus"},
+  {n:"Pandoh Dam",lat:31.67,lon:77.03,river:"Beas",state:"Himachal Pradesh",yr:1977,ht:76,cap:40,pur:"Hydropower",type:"gravity",basin:"Indus"},
+  {n:"Bairasiul Dam",lat:32.52,lon:76.17,river:"Ravi",state:"Himachal Pradesh",yr:1981,ht:108,cap:91,pur:"Hydropower",type:"gravity",basin:"Indus"},
+  {n:"Chamera Dam",lat:32.45,lon:76.12,river:"Ravi",state:"Himachal Pradesh",yr:1994,ht:140,cap:600,pur:"Hydropower",type:"rockfill",basin:"Indus"},
+  {n:"Ranganadi Dam",lat:27.22,lon:93.45,river:"Ranganadi",state:"Arunachal Pradesh",yr:2002,ht:68,cap:65,pur:"Hydropower",type:"gravity",basin:"Brahmaputra"},
+  {n:"Kopili Dam",lat:25.88,lon:92.5,river:"Kopili",state:"Assam",yr:1976,ht:60,cap:1370,pur:"Hydropower",type:"earthfill",basin:"Brahmaputra"},
+  {n:"Polavaram Dam",lat:17.25,lon:81.65,river:"Godavari",state:"Andhra Pradesh",yr:2023,ht:48.07,cap:9459,pur:"Irrigation,Hydropower,Water Supply",type:"earthfill",basin:"Godavari"},
+  {n:"Sriram Sagar",lat:18.975,lon:78.293,river:"Godavari",state:"Telangana",yr:1980,ht:40,cap:3036,pur:"Irrigation",type:"earthfill",basin:"Godavari"},
+  {n:"Somasila Dam",lat:14.3,lon:79.42,river:"Penna",state:"Andhra Pradesh",yr:1989,ht:53.3,cap:2792,pur:"Irrigation",type:"earthfill",basin:"East Coast"},
+  {n:"Salaulim Dam",lat:15.29,lon:74.08,river:"Salaulim",state:"Goa",yr:1986,ht:35,cap:280,pur:"Water Supply,Irrigation",type:"earthfill",basin:"West Coast"},
+  {n:"Bhatsa Dam",lat:19.68,lon:73.45,river:"Bhatsa",state:"Maharashtra",yr:1981,ht:87.77,cap:961,pur:"Water Supply",type:"earthfill",basin:"West Coast"},
+  {n:"Vaitarna Dam",lat:19.8,lon:73.5,river:"Vaitarna",state:"Maharashtra",yr:1969,ht:82,cap:254,pur:"Water Supply",type:"earthfill",basin:"West Coast"},
+  {n:"Radhanagari Dam",lat:16.5252,lon:74.0855,river:"Bhogavati",state:"Maharashtra",yr:1954,ht:38.1,cap:369,pur:"Irrigation",type:"masonry",basin:"West Coast"},
+  {n:"Jawahar Sagar Dam",lat:25.1,lon:75.8,river:"Chambal",state:"Rajasthan",yr:1972,ht:45.7,cap:196,pur:"Hydropower",type:"gravity",basin:"Ganga"},
+  {n:"Parbati Dam (Rajasthan)",lat:24.4,lon:76.1,river:"Parbati",state:"Rajasthan",yr:1971,ht:66,cap:1106,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Ganga"},
+  {n:"Farakka Barrage",lat:24.8,lon:87.9,river:"Ganga",state:"West Bengal",yr:1975,ht:14,cap:0,pur:"Irrigation,Water Supply",type:"gravity",basin:"Ganga"},
+  {n:"Linganamakki Dam",lat:14.2,lon:74.9,river:"Sharavathi",state:"Karnataka",yr:1964,ht:56,cap:4497,pur:"Hydropower",type:"earthfill",basin:"West Coast"},
+  {n:"Varahi Dam",lat:13.82,lon:74.93,river:"Varahi",state:"Karnataka",yr:1986,ht:65,cap:291,pur:"Hydropower",type:"earthfill",basin:"West Coast"},
+  {n:"Manjra Dam",lat:17.8,lon:77.6,river:"Manjra",state:"Telangana",yr:1956,ht:37,cap:1197,pur:"Irrigation",type:"earthfill",basin:"Godavari"},
+  {n:"Nizam Sagar",lat:18.3,lon:77.8,river:"Manjra",state:"Telangana",yr:1931,ht:26,cap:827,pur:"Irrigation",type:"masonry",basin:"Godavari"},
+  {n:"Singur Dam",lat:17.6,lon:77.9,river:"Manjra",state:"Telangana",yr:1991,ht:33,cap:930,pur:"Water Supply,Irrigation",type:"earthfill",basin:"Godavari"},
+  {n:"Osmansagar",lat:17.4,lon:78.2,river:"Musi",state:"Telangana",yr:1927,ht:24,cap:194,pur:"Water Supply,Flood Control",type:"gravity",basin:"Krishna"},
+  {n:"Rajghat Dam",lat:24.7,lon:78.2,river:"Betwa",state:"Madhya Pradesh",yr:1997,ht:47,cap:1396,pur:"Irrigation,Water Supply",type:"earthfill",basin:"Ganga"},
+  {n:"Vaigai Dam",lat:9.9,lon:77.5,river:"Vaigai",state:"Tamil Nadu",yr:1958,ht:38,cap:193,pur:"Irrigation",type:"earthfill",basin:"East Coast"},
+  {n:"Aji Dam",lat:22.3,lon:70.7,river:"Aji",state:"Gujarat",yr:1968,ht:30,cap:226,pur:"Water Supply,Irrigation",type:"earthfill",basin:"West Coast"},
+  {n:"Shetrunji Dam",lat:21.4,lon:71.9,river:"Shetrunji",state:"Gujarat",yr:1979,ht:47,cap:818,pur:"Irrigation",type:"earthfill",basin:"West Coast"},
+  {n:"Damanganga Dam",lat:20.4,lon:73.15,river:"Damanganga",state:"Gujarat",yr:1990,ht:36,cap:565,pur:"Irrigation,Water Supply",type:"earthfill",basin:"West Coast"},
+  {n:"Warna Dam",lat:16.92,lon:74.05,river:"Warna",state:"Maharashtra",yr:1985,ht:54,cap:697,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Krishna"},
+  {n:"Dhom Dam",lat:17.88,lon:73.87,river:"Krishna",state:"Maharashtra",yr:1979,ht:48,cap:398,pur:"Irrigation",type:"earthfill",basin:"Krishna"},
+  {n:"Yeldari Dam",lat:20.0,lon:76.8,river:"Purna",state:"Maharashtra",yr:1967,ht:30,cap:946,pur:"Irrigation",type:"earthfill",basin:"Tapi"},
+  {n:"Kukdi Dam",lat:19.05,lon:74.27,river:"Kukdi",state:"Maharashtra",yr:1997,ht:65,cap:448,pur:"Irrigation",type:"earthfill",basin:"West Coast"},
+  {n:"Koshi Barrage",lat:26.5,lon:87.0,river:"Koshi",state:"Bihar",yr:1959,ht:58,cap:0,pur:"Flood Control,Irrigation",type:"gravity",basin:"Ganga"},
+  {n:"Gandak Dam",lat:27.26,lon:84.4,river:"Gandak",state:"Bihar",yr:1968,ht:36,cap:0,pur:"Irrigation",type:"gravity",basin:"Ganga"},
+  {n:"Massanjore Dam",lat:24.3,lon:87.1,river:"Mayurakshi",state:"West Bengal",yr:1955,ht:56,cap:643,pur:"Irrigation,Hydropower",type:"masonry",basin:"Ganga"},
+  {n:"Narmada Sagar (Bargi)",lat:23.04,lon:79.93,river:"Narmada",state:"Madhya Pradesh",yr:1990,ht:69,cap:3921,pur:"Irrigation,Hydropower",type:"earthfill",basin:"Narmada"},
+  {n:"Larji Dam",lat:31.8,lon:77.1,river:"Beas",state:"Himachal Pradesh",yr:2008,ht:42,cap:4,pur:"Hydropower",type:"gravity",basin:"Indus"},
+  {n:"Parbati Dam (HP)",lat:31.9,lon:77.5,river:"Parbati",state:"Himachal Pradesh",yr:2009,ht:115,cap:90,pur:"Hydropower",type:"rockfill",basin:"Indus"},
+  {n:"Karcham Wangtoo Dam",lat:31.58,lon:78.07,river:"Sutlej",state:"Himachal Pradesh",yr:2011,ht:130,cap:73,pur:"Hydropower",type:"gravity",basin:"Indus"},
+  {n:"Baspa II Dam",lat:31.38,lon:78.22,river:"Baspa",state:"Himachal Pradesh",yr:2003,ht:116,cap:90,pur:"Hydropower",type:"rockfill",basin:"Indus"},
+  {n:"Kundah Dam",lat:11.35,lon:76.85,river:"Kundah",state:"Tamil Nadu",yr:1966,ht:59,cap:1086,pur:"Hydropower",type:"earthfill",basin:"Cauvery"},
+  {n:"Krishnagiri Dam",lat:12.5262,lon:78.2066,river:"Thenpennai",state:"Tamil Nadu",yr:1958,ht:43,cap:465,pur:"Irrigation",type:"earthfill",basin:"East Coast"},
+  {n:"Peechi Reservoir",lat:10.53,lon:76.42,river:"Manali",state:"Kerala",yr:1957,ht:48.6,cap:122,pur:"Water Supply",type:"earthfill",basin:"West Coast"},
+  {n:"Idamalayar Dam",lat:10.19,lon:76.77,river:"Idamalayar",state:"Kerala",yr:1987,ht:169,cap:1100,pur:"Hydropower",type:"earthfill",basin:"West Coast"},
+  {n:"Karapuzha Dam",lat:11.75,lon:76.0,river:"Karapuzha",state:"Kerala",yr:1999,ht:46,cap:244,pur:"Irrigation",type:"earthfill",basin:"West Coast"},
+  {n:"Meenachil Dam",lat:9.55,lon:76.88,river:"Meenachil",state:"Kerala",yr:1964,ht:25,cap:36,pur:"Irrigation",type:"earthfill",basin:"West Coast"},
+  {n:"Mula Dam",lat:19.2,lon:74.1,river:"Mula",state:"Maharashtra",yr:1972,ht:55,cap:623,pur:"Irrigation,Water Supply",type:"earthfill",basin:"Krishna"},
+  {n:"Isapur Dam",lat:20.0,lon:77.5,river:"Wardha",state:"Maharashtra",yr:1975,ht:29,cap:487,pur:"Irrigation",type:"earthfill",basin:"Godavari"},
+  {n:"Lower Wardha Dam",lat:20.5,lon:78.1,river:"Wardha",state:"Maharashtra",yr:2010,ht:28,cap:384,pur:"Irrigation",type:"earthfill",basin:"Godavari"},
+  {n:"Kota Barrage",lat:25.2,lon:75.85,river:"Chambal",state:"Rajasthan",yr:1960,ht:18,cap:100,pur:"Irrigation",type:"gravity",basin:"Ganga"},
+  {n:"Gomukhi Dam",lat:11.9,lon:78.6,river:"Gomukhi",state:"Tamil Nadu",yr:1985,ht:55,cap:100,pur:"Irrigation",type:"earthfill",basin:"East Coast"},
+  {n:"Supa Dam",lat:15.09,lon:74.6,river:"Kalinadi",state:"Karnataka",yr:1994,ht:100,cap:4524,pur:"Hydropower",type:"earthfill",basin:"West Coast"},
+  {n:"Hivre Dam",lat:20.26,lon:74.07,river:"Girna",state:"Maharashtra",yr:1993,ht:37,cap:540,pur:"Irrigation",type:"earthfill",basin:"Tapi"},
+  {n:"Nira Deoghar Dam",lat:18.1,lon:74.5,river:"Nira",state:"Maharashtra",yr:2020,ht:66,cap:426,pur:"Irrigation",type:"earthfill",basin:"Krishna"},
+  {n:"Tandula Dam",lat:20.54,lon:81.04,river:"Tandula",state:"Chhattisgarh",yr:1921,ht:24,cap:395,pur:"Irrigation",type:"masonry",basin:"Mahanadi"},
+  {n:"Minimata Hasdeo Bango",lat:22.39,lon:82.31,river:"Hasdeo",state:"Chhattisgarh",yr:1989,ht:87,cap:3390,pur:"Hydropower,Irrigation",type:"earthfill",basin:"Mahanadi"},
+  {n:"Gangrel Dam",lat:20.6,lon:81.88,river:"Mahanadi",state:"Chhattisgarh",yr:1979,ht:26,cap:909,pur:"Irrigation",type:"earthfill",basin:"Mahanadi"},
+  {n:"Mrugavani Reservoir",lat:17.2,lon:78.35,river:"Musi",state:"Telangana",yr:1955,ht:15,cap:15,pur:"Water Supply",type:"masonry",basin:"Krishna"},
+  {n:"Srikhanda Dam",lat:22.8,lon:88.0,river:"Rupnarayan",state:"West Bengal",yr:1980,ht:20,cap:150,pur:"Irrigation",type:"earthfill",basin:"East Coast"},
+  {n:"Lakhwar Dam",lat:30.4,lon:77.9,river:"Yamuna",state:"Uttarakhand",yr:2020,ht:204,cap:580,pur:"Hydropower,Irrigation",type:"gravity",basin:"Ganga"},
+  {n:"Vyasi Dam",lat:30.5,lon:77.8,river:"Yamuna",state:"Uttarakhand",yr:2021,ht:60,cap:34,pur:"Hydropower",type:"gravity",basin:"Ganga"},
+];
+
+// ═══════════════════════════════════════════════════════════════
+// API KEY HANDLING
+// ═══════════════════════════════════════════════════════════════
+(function checkSavedKey(){
+  const k = localStorage.getItem('gmaps_key');
+  if(k){ document.getElementById('saved-key-row').style.display='flex'; }
+})();
+
+function useSavedKey(){
+  const k = localStorage.getItem('gmaps_key');
+  if(k){ document.getElementById('api-input').value=k; launchMap(); }
+}
+
+function showApiModal(){
+  document.getElementById('api-modal').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+
+function launchMap(){
+  const key = document.getElementById('api-input').value.trim() || localStorage.getItem('gmaps_key');
+  if(!key){ alert('Please enter a Google Maps API key'); return; }
+  localStorage.setItem('gmaps_key', key);
+  document.getElementById('api-modal').style.display='none';
+  document.getElementById('loading').style.display='flex';
+  window._gmapsKey = key;
+  const s = document.createElement('script');
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=visualization&callback=initMap&v=weekly`;
+  s.onerror = () => {
+    document.getElementById('loading').style.display='none';
+    document.getElementById('api-modal').style.display='flex';
+    alert('Failed to load Google Maps. Check your API key and ensure "Maps JavaScript API" is enabled in Google Cloud Console.');
+  };
+  document.head.appendChild(s);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GOOGLE MAPS INIT
+// ═══════════════════════════════════════════════════════════════
+let map, markers=[], heatmap, osmLayer=[], resLayer=[];
+let infoWin;
+
+function setStep(s){ document.getElementById('load-step').textContent=s; }
+
+async function initMap(){
+  setStep('Creating map…');
+  document.getElementById('app').style.display='flex';
+  document.getElementById('loading').style.display='none';
+
+  map = new google.maps.Map(document.getElementById('map'),{
+    center:{lat:22,lng:80},zoom:5,
+    mapTypeId:'hybrid',
+    disableDefaultUI:false,
+    zoomControl:true,
+    mapTypeControl:false,
+    streetViewControl:false,
+    fullscreenControl:false,
+    scaleControl:true,
+    styles:[{featureType:'all',elementType:'labels.text.fill',stylers:[{color:'#c8d6e5'}]}]
+  });
+
+  infoWin = new google.maps.InfoWindow();
+
+  // ── MAJOR DAM MARKERS ──
+  setStep('Plotting dam locations…');
+  DAMS.forEach(d=>{
+    const color = getPurposeColor(d.pur);
+    const size  = getMarkerSize(d.cap);
+    const m = new google.maps.Marker({
+      position:{lat:d.lat,lng:d.lon},
+      map,
+      icon:{
+        path:google.maps.SymbolPath.CIRCLE,
+        scale:size,
+        fillColor:color,
+        fillOpacity:0.92,
+        strokeColor:'#ffffff',
+        strokeWeight:1.5,
+        strokeOpacity:0.7
+      },
+      title:d.n,
+      zIndex:10
+    });
+    m.addListener('click',()=>onDamClick(d,m));
+    markers.push({dam:d,marker:m});
+  });
+  document.getElementById('c-major').textContent = DAMS.length;
+  document.getElementById('sv-major').textContent = DAMS.length;
+  document.getElementById('hs-major').textContent = DAMS.length;
+
+  // ── HEATMAP (capacity-weighted, initially off) ──
+  const heatData = DAMS.map(d=>({
+    location: new google.maps.LatLng(d.lat,d.lon),
+    weight: d.cap ? Math.log10(Math.max(1,d.cap)) : 1
+  }));
+  heatmap = new google.maps.visualization.HeatmapLayer({
+    data:heatData,
+    map:null,
+    radius:55,
+    maxIntensity:5,
+    opacity:0.75,
+    gradient:[
+      'rgba(0,0,0,0)',
+      'rgba(0,60,255,0.4)','rgba(0,120,255,0.6)',
+      'rgba(0,200,255,0.8)','rgba(0,255,200,0.9)',
+      'rgba(100,255,0,1)','rgba(200,255,0,1)',
+      'rgba(255,200,0,1)','rgba(255,100,0,1)','rgba(255,0,0,1)'
+    ]
+  });
+
+  // ── RIVER POLYLINES ──
+  drawRivers();
+
+  // ── POPULATE FILTERS ──
+  populateFilters();
+
+  // ── CHARTS ──
+  buildCharts();
+
+  // ── TOGGLES ──
+  bindToggles();
+
+  // ── SEARCH ──
+  bindSearch();
+
+  // ── FETCH OSM DAMS ──
+  loadOSMDams();
+
+  toast('Map ready — click any marker for details');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MARKER HELPERS
+// ═══════════════════════════════════════════════════════════════
+function getPurposeColor(pur){
+  if(!pur) return '#94a3b8';
+  const p=pur.toLowerCase();
+  const hasHydro=p.includes('hydropower'), hasIrr=p.includes('irrigation'),
+        hasWater=p.includes('water supply'), hasFlood=p.includes('flood');
+  if((hasHydro&&hasIrr)||(hasHydro&&hasFlood)||(hasIrr&&hasFlood)) return '#f59e0b';
+  if(hasHydro) return '#a855f7';
+  if(hasWater) return '#3b82f6';
+  if(hasFlood) return '#ef4444';
+  if(hasIrr)   return '#22c55e';
+  return '#94a3b8';
+}
+function getMarkerSize(cap){
+  if(!cap||cap===0) return 5;
+  return Math.max(5, Math.min(18, 3+Math.log10(Math.max(1,cap))*4));
+}
+
+function buildInfoHtml(d){
+  const purposes=(d.pur||'—').split(',').map(p=>`<span class="ptag">${p.trim()}</span>`).join('');
+  return `<div class="gm-iw-name">${d.n}</div>
+    <div class="gm-iw-row"><span class="gm-iw-k">River</span><span class="gm-iw-v">${d.river||'—'}</span></div>
+    <div class="gm-iw-row"><span class="gm-iw-k">State</span><span class="gm-iw-v">${d.state||'—'}</span></div>
+    ${d.yr?`<div class="gm-iw-row"><span class="gm-iw-k">Completed</span><span class="gm-iw-v">${d.yr}</span></div>`:''}
+    ${d.ht?`<div class="gm-iw-row"><span class="gm-iw-k">Height</span><span class="gm-iw-v">${d.ht} m</span></div>`:''}
+    ${d.cap?`<div class="gm-iw-row"><span class="gm-iw-k">Capacity</span><span class="gm-iw-v">${d.cap.toLocaleString()} MCM</span></div>`:''}
+    ${d.type?`<div class="gm-iw-row"><span class="gm-iw-k">Type</span><span class="gm-iw-v" style="text-transform:capitalize">${d.type}</span></div>`:''}
+    ${d.basin?`<div class="gm-iw-row"><span class="gm-iw-k">Basin</span><span class="gm-iw-v">${d.basin}</span></div>`:''}
+    <div style="margin-top:6px">${purposes}</div>`;
+}
+
+function showSideInfo(d){
+  const purposes=(d.pur||'—').split(',').map(p=>`<span class="ptag">${p.trim()}</span>`).join('');
+  document.getElementById('infobox').innerHTML=`
+    <div class="ibadge">${d.type||'dam'} · ${d.basin||'—'}</div>
+    <div class="iname">${d.n}</div>
+    <div class="ir"><span class="ik">River</span><span class="iv">${d.river||'—'}</span></div>
+    <div class="ir"><span class="ik">State</span><span class="iv">${d.state||'—'}</span></div>
+    ${d.yr?`<div class="ir"><span class="ik">Completed</span><span class="iv">${d.yr}</span></div>`:''}
+    ${d.ht?`<div class="ir"><span class="ik">Height</span><span class="iv">${d.ht} m</span></div>`:''}
+    ${d.cap?`<div class="ir"><span class="ik">Capacity</span><span class="iv">${d.cap.toLocaleString()} MCM</span></div>`:''}
+    <div class="ir"><span class="ik">Purpose</span></div>
+    <div style="padding-top:4px">${purposes}</div>`;
+  switchTab('info', document.querySelector('.tab:last-child'));
+}
+
+function onDamClick(d, m){
+  infoWin.setContent(buildInfoHtml(d));
+  infoWin.open(map,m);
+  showSideInfo(d);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RIVERS
+// ═══════════════════════════════════════════════════════════════
+const RIVERS=[
+  {n:'Ganga',coords:[[30.11,78.3],[27.17,78.02],[26.45,80.35],[25.45,81.88],[25.3,83.0],[25.0,85.0],[24.8,87.9],[22.55,88.3]]},
+  {n:'Brahmaputra',coords:[[29.3,93.0],[27.5,93.5],[26.7,92.0],[25.94,89.82],[25.2,89.5]]},
+  {n:'Yamuna',coords:[[30.9,77.5],[29.5,77.7],[28.65,77.24],[27.2,78.0],[26.1,79.5],[25.43,81.88]]},
+  {n:'Godavari',coords:[[19.96,73.75],[18.5,77.0],[17.5,80.5],[17.3,81.5],[16.35,82.26]]},
+  {n:'Krishna',coords:[[17.68,73.77],[16.5,75.5],[16.0,76.5],[16.3,79.5],[15.72,80.93]]},
+  {n:'Narmada',coords:[[22.67,75.85],[22.35,76.6],[22.12,77.4],[21.85,78.5],[21.65,73.61]]},
+  {n:'Mahanadi',coords:[[22.0,82.5],[21.5,83.9],[20.5,86.0],[20.27,86.87]]},
+  {n:'Cauvery',coords:[[12.42,76.57],[11.94,77.63],[11.3,78.5],[10.87,79.86]]},
+  {n:'Tapti',coords:[[21.8,78.6],[21.23,77.0],[21.25,73.9],[21.08,72.68]]},
+  {n:'Sutlej',coords:[[32.47,77.17],[31.41,76.44],[30.8,75.5],[30.4,74.8],[29.1,72.9]]},
+  {n:'Chambal',coords:[[24.7,75.56],[25.3,75.8],[25.87,76.62],[26.45,78.16],[26.5,79.37]]},
+  {n:'Betwa',coords:[[23.6,77.5],[24.5,78.0],[25.09,78.38],[25.5,78.8]]},
+  {n:'Son',coords:[[24.17,81.42],[24.7,82.5],[24.74,84.0],[25.2,84.35]]},
+  {n:'Damodar',coords:[[23.65,86.81],[23.54,87.32],[23.18,87.92],[22.68,88.2]]},
+  {n:'Beas',coords:[[32.0,75.9],[31.9,76.0],[31.43,75.5],[31.05,74.9]]},
+  {n:'Ravi',coords:[[32.5,75.8],[31.9,75.3],[31.1,74.7],[30.45,74.0]]},
+  {n:'Periyar',coords:[[9.52,77.14],[9.65,76.8],[10.0,76.5]]},
+  {n:'Mahi',coords:[[23.5,74.1],[23.0,73.5],[22.5,73.2],[21.8,72.9]]},
+];
+let riverPolylines=[];
+function drawRivers(){
+  RIVERS.forEach(r=>{
+    const pl = new google.maps.Polyline({
+      path:r.coords.map(c=>({lat:c[0],lng:c[1]})),
+      map:null,
+      strokeColor:'#22d3ee',
+      strokeOpacity:0.65,
+      strokeWeight:1.8,
+      geodesic:true
+    });
+    riverPolylines.push(pl);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OSM DAMS
+// ═══════════════════════════════════════════════════════════════
+async function loadOSMDams(){
+  const q=`[out:json][timeout:60];(node["waterway"="dam"](8.0,68.0,37.5,97.5);way["waterway"="dam"](8.0,68.0,37.5,97.5);node["man_made"="dam"](8.0,68.0,37.5,97.5););out center;`;
+  try{
+    const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
+    const data=await r.json();
+    let cnt=0;
+    (data.elements||[]).forEach(el=>{
+      const lat=el.lat||(el.center&&el.center.lat);
+      const lon=el.lon||(el.center&&el.center.lon);
+      if(!lat||!lon) return;
+      const isDup=DAMS.some(d=>Math.abs(d.lat-lat)<0.015&&Math.abs(d.lon-lon)<0.015);
+      if(isDup) return;
+      const tags=el.tags||{};
+      const d={n:tags.name||tags['name:en']||'Unnamed Dam',river:'—',state:'—',pur:null};
+      const m=new google.maps.Marker({
+        position:{lat,lng:lon},map,
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:5,fillColor:'#f97316',fillOpacity:0.85,strokeColor:'#fff',strokeWeight:1,strokeOpacity:0.5},
+        title:d.n,zIndex:5
+      });
+      m.addListener('click',()=>{
+        infoWin.setContent(buildInfoHtml(d));
+        infoWin.open(map,m);
+        showSideInfo(d);
+      });
+      osmLayer.push(m);
+      cnt++;
+    });
+    document.getElementById('c-osm').textContent=cnt;
+    document.getElementById('sv-osm').textContent=cnt;
+    document.getElementById('hs-osm').textContent=cnt;
+    toast(`Loaded ${cnt} additional dams from OpenStreetMap`);
+  }catch(e){
+    document.getElementById('c-osm').textContent='N/A';
+    document.getElementById('hs-osm').textContent='N/A';
+    toast('OSM data unavailable — showing curated dams');
+  }
+}
+
+// RESERVOIRS
+async function loadReservoirs(){
+  if(resLayer.length>0) return;
+  const q=`[out:json][timeout:90];(way["water"="reservoir"](8.0,68.0,37.5,97.5);way["landuse"="reservoir"](8.0,68.0,37.5,97.5););out center;`;
+  try{
+    const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)});
+    const data=await r.json();
+    let cnt=0;
+    (data.elements||[]).forEach(el=>{
+      const lat=el.lat||(el.center&&el.center.lat);
+      const lon=el.lon||(el.center&&el.center.lon);
+      if(!lat||!lon) return;
+      const tags=el.tags||{};
+      const m=new google.maps.Marker({
+        position:{lat,lng:lon},map,
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:6,fillColor:'#3b82f6',fillOpacity:0.7,strokeColor:'#93c5fd',strokeWeight:1.5},
+        title:tags.name||'Reservoir',zIndex:3
+      });
+      resLayer.push(m);
+      cnt++;
+    });
+    document.getElementById('hs-res').textContent=cnt;
+    toast(`Loaded ${cnt} reservoirs`);
+  }catch(e){ toast('Could not load reservoir data'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOGGLES
+// ═══════════════════════════════════════════════════════════════
+function bindToggles(){
+  document.getElementById('tgl-major').addEventListener('change',function(){
+    markers.forEach(({marker:m})=>m.setMap(this.checked?map:null));
+  });
+  document.getElementById('tgl-osm').addEventListener('change',function(){
+    osmLayer.forEach(m=>m.setMap(this.checked?map:null));
+  });
+  document.getElementById('tgl-heat').addEventListener('change',function(){
+    heatmap.setMap(this.checked?map:null);
+  });
+  document.getElementById('tgl-res').addEventListener('change',async function(){
+    if(this.checked){
+      await loadReservoirs();
+      resLayer.forEach(m=>m.setMap(map));
+    } else {
+      resLayer.forEach(m=>m.setMap(null));
+    }
+  });
+  document.getElementById('tgl-rivers').addEventListener('change',function(){
+    riverPolylines.forEach(p=>p.setMap(this.checked?map:null));
+  });
+}
+
+function setMapType(t,btn){
+  document.querySelectorAll('.bmbtn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  map.setMapTypeId(t);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════════════════════
+const activePur=new Set(), activeType=new Set();
+let filterState='', filterBasin='';
+
+function populateFilters(){
+  const states=[...new Set(DAMS.map(d=>d.state).filter(Boolean))].sort();
+  const fs=document.getElementById('f-state');
+  states.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;fs.appendChild(o);});
+  fs.onchange=()=>{filterState=fs.value;applyFilters();};
+
+  const basins=[...new Set(DAMS.map(d=>d.basin).filter(Boolean))].sort();
+  const fb=document.getElementById('f-basin');
+  basins.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;fb.appendChild(o);});
+  fb.onchange=()=>{filterBasin=fb.value;applyFilters();};
+
+  const purposes=[...new Set(DAMS.flatMap(d=>(d.pur||'').split(',').map(p=>p.trim())).filter(Boolean))].sort();
+  const pc=document.getElementById('f-pur-tags');
+  purposes.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='ftag'; b.textContent=p;
+    b.onclick=()=>{b.classList.toggle('on');activePur.has(p)?activePur.delete(p):activePur.add(p);applyFilters();};
+    pc.appendChild(b);
+  });
+
+  const types=[...new Set(DAMS.map(d=>d.type).filter(Boolean))].sort();
+  const tc=document.getElementById('f-type-tags');
+  types.forEach(t=>{
+    const b=document.createElement('button');
+    b.className='ftag'; b.textContent=t;
+    b.onclick=()=>{b.classList.toggle('on');activeType.has(t)?activeType.delete(t):activeType.add(t);applyFilters();};
+    tc.appendChild(b);
+  });
+}
+
+function applyFilters(){
+  const maxYr=parseInt(document.getElementById('f-year').value)||2023;
+  const minHt=parseInt(document.getElementById('f-height').value)||0;
+  const minCap=parseInt(document.getElementById('f-cap').value)||0;
+  markers.forEach(({dam:d,marker:m})=>{
+    let show=true;
+    if(filterState && d.state!==filterState) show=false;
+    if(filterBasin && d.basin!==filterBasin) show=false;
+    if(d.yr && d.yr>maxYr) show=false;
+    if(minHt>0 && (!d.ht||d.ht<minHt)) show=false;
+    if(minCap>0 && (!d.cap||d.cap<minCap)) show=false;
+    if(activePur.size>0){
+      const purs=(d.pur||'').split(',').map(p=>p.trim());
+      if(![...activePur].some(p=>purs.includes(p))) show=false;
+    }
+    if(activeType.size>0 && !activeType.has(d.type)) show=false;
+    m.setMap(show&&document.getElementById('tgl-major').checked?map:null);
+  });
+}
+
+function resetFilters(){
+  document.getElementById('f-state').value='';
+  document.getElementById('f-basin').value='';
+  document.getElementById('f-year').value=2023;
+  document.getElementById('f-height').value=0;
+  document.getElementById('f-cap').value=0;
+  document.getElementById('yr-val').textContent='2023';
+  document.getElementById('ht-val').textContent='0 m';
+  document.getElementById('cap-val').textContent='0';
+  filterState=''; filterBasin='';
+  activePur.clear(); activeType.clear();
+  document.querySelectorAll('.ftag.on').forEach(b=>b.classList.remove('on'));
+  applyFilters();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════════════
+function bindSearch(){
+  document.getElementById('searchbox').addEventListener('input',function(){
+    const q=this.value.trim().toLowerCase();
+    const sr=document.getElementById('sres');
+    sr.innerHTML='';
+    if(!q||q.length<2) return;
+    const results=DAMS.filter(d=>
+      d.n.toLowerCase().includes(q)||
+      (d.state||'').toLowerCase().includes(q)||
+      (d.river||'').toLowerCase().includes(q)||
+      (d.basin||'').toLowerCase().includes(q)
+    ).slice(0,8);
+    results.forEach(d=>{
+      const el=document.createElement('div');
+      el.className='sitem';
+      el.innerHTML=`<strong>${d.n}</strong><small>${d.state} · ${d.river||'—'} · ${d.yr||'N/A'}</small>`;
+      el.onclick=()=>{
+        map.panTo({lat:d.lat,lng:d.lon});
+        map.setZoom(12);
+        const {marker:m}=markers.find(x=>x.dam===d)||{};
+        if(m){ google.maps.event.trigger(m,'click'); }
+        sr.innerHTML='';
+        this.value=d.n;
+        toast(`Navigated to ${d.n}`);
+      };
+      sr.appendChild(el);
+    });
+    if(!results.length) sr.innerHTML='<div style="color:#334155;font-size:.78rem;padding:8px">No results found</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════════
+function buildCharts(){
+  // State distribution
+  const stateCount={};
+  DAMS.forEach(d=>{ stateCount[d.state]=(stateCount[d.state]||0)+1; });
+  const sorted=Object.entries(stateCount).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const stateCtx=document.getElementById('state-chart').getContext('2d');
+  new Chart(stateCtx,{
+    type:'bar',
+    data:{
+      labels:sorted.map(x=>x[0]),
+      datasets:[{
+        data:sorted.map(x=>x[1]),
+        backgroundColor:sorted.map((_,i)=>`hsl(${200+i*15},70%,${45+i*2}%)`),
+        borderWidth:0,borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} dams`}}},
+      scales:{
+        x:{grid:{color:'#0f172a'},ticks:{color:'#475569',font:{size:10}}},
+        y:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:10}}}
+      },
+      onClick:(_,els)=>{
+        if(els.length){
+          const lbl=sorted[els[0].index][0];
+          document.getElementById('f-state').value=lbl;
+          filterState=lbl; applyFilters();
+          switchTab('filter',document.querySelectorAll('.tab')[3]);
+          toast(`Filtered to ${lbl}`);
+        }
+      }
+    }
+  });
+
+  // Purpose doughnut
+  const purCount={Hydropower:0,Irrigation:0,'Water Supply':0,'Flood Control':0,Multipurpose:0,Other:0};
+  DAMS.forEach(d=>{
+    if(!d.pur){purCount.Other++;return;}
+    const p=d.pur.toLowerCase();
+    const h=p.includes('hydropower'),ir=p.includes('irrigation'),w=p.includes('water supply'),f=p.includes('flood');
+    if((h&&ir)||(h&&ir&&f)||(ir&&f)) purCount.Multipurpose++;
+    else if(h) purCount.Hydropower++;
+    else if(w) purCount['Water Supply']++;
+    else if(f) purCount['Flood Control']++;
+    else if(ir) purCount.Irrigation++;
+    else purCount.Other++;
+  });
+  const purCtx=document.getElementById('pur-chart').getContext('2d');
+  new Chart(purCtx,{
+    type:'doughnut',
+    data:{
+      labels:Object.keys(purCount),
+      datasets:[{
+        data:Object.values(purCount),
+        backgroundColor:['#a855f7','#22c55e','#3b82f6','#ef4444','#f59e0b','#64748b'],
+        borderWidth:2,borderColor:'#080c18'
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'right',labels:{color:'#64748b',font:{size:10},boxWidth:12,padding:8}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}`}}
+      }
+    }
+  });
+
+  // Tallest dams list
+  const tallest=[...DAMS].filter(d=>d.ht).sort((a,b)=>b.ht-a.ht).slice(0,8);
+  const tl=document.getElementById('tallest-list');
+  tl.innerHTML=tallest.map((d,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #0f172a;cursor:pointer" onclick="flyTo(${d.lat},${d.lon},'${d.n}')">
+    <span style="font-size:.7rem;color:#334155;width:16px">${i+1}</span>
+    <div style="flex:1"><div style="font-size:.78rem;color:#94a3b8">${d.n}</div><div style="font-size:.68rem;color:#334155">${d.state}</div></div>
+    <div style="background:#1e293b;border-radius:4px;padding:2px 7px;font-size:.72rem;color:#38bdf8">${d.ht}m</div>
+  </div>`).join('');
+
+  // Largest capacity list
+  const largest=[...DAMS].filter(d=>d.cap).sort((a,b)=>b.cap-a.cap).slice(0,8);
+  const ll=document.getElementById('largest-list');
+  ll.innerHTML=largest.map((d,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #0f172a;cursor:pointer" onclick="flyTo(${d.lat},${d.lon},'${d.n}')">
+    <span style="font-size:.7rem;color:#334155;width:16px">${i+1}</span>
+    <div style="flex:1"><div style="font-size:.78rem;color:#94a3b8">${d.n}</div><div style="font-size:.68rem;color:#334155">${d.state}</div></div>
+    <div style="background:#1e293b;border-radius:4px;padding:2px 7px;font-size:.72rem;color:#22c55e">${d.cap.toLocaleString()} MCM</div>
+  </div>`).join('');
+}
+
+function flyTo(lat,lon,name){
+  map.panTo({lat,lng:lon}); map.setZoom(12);
+  toast(`Viewing ${name}`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════════
+function switchTab(id, btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tc-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// Enter key on API input
+document.getElementById('api-input').addEventListener('keydown',e=>{ if(e.key==='Enter') launchMap(); });
+</script>
+</body>
+</html>
